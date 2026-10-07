@@ -3,6 +3,37 @@
 Ambiente: Windows 11 x64, Python 3.12.10, PySide6 6.11.2,
 SQLite da biblioteca padrão, PyInstaller 6.22.3.
 
+## Instalador EXE offline — revisão 1.3.2
+
+- **145 testes aprovados**. Novas verificações cobrem runtime MSVC completo,
+  seleção das versões mais recentes, remoção explícita de arquivos próprios,
+  preservação de arquivos desconhecidos e distinção entre MSVC redistribuível
+  e `msvcp_win.dll` fornecida pelo Windows.
+- EXE NSIS 3.12 compilado com UTF-8 explícito e avisos tratados como erros.
+  Compilador portátil conferido por SHA-256 antes do uso.
+- Windows 11 x64 **build 26300**: instalação e reinstalação com saída **0**,
+  atalho correto e **233 arquivos** conferidos por SHA-256. Teste silencioso
+  sem aceite recusado com **1603**, sem instalar o aplicativo.
+- Aplicativo instalado executado com PATH restrito ao Windows e variáveis de
+  Python/Qt removidas: plugins offscreen e Windows retornaram **0**, com PDF e
+  prévia. Os **19 módulos de runtime** Python/Qt/MSVC/SQLite carregados vieram
+  da própria pasta instalada, sem depender das cópias do ambiente de desenvolvimento.
+- Reinstalação restaurou licença removida intencionalmente. Remoção retirou
+  aplicativo, registro e atalho. Banco real e atalho EFTX preexistente conservaram
+  seus hashes; arquivo adicional na pasta de teste foi preservado.
+- O EXE instala separadamente do MSI anterior e reutiliza o banco de projetos.
+  Não executa MSI, instalador de runtime, downloader ou serviço auxiliar.
+- PDFs offscreen/Windows conferidos com pypdf: sete páginas, versão 1.3.2,
+  LCF12-50, potência de pico, referência malha a malha e dipolo presentes.
+  SQLite de diagnóstico com integridade `ok`, 47 modelos e 1669 amostras.
+  Os 69 textos de licença foram conferidos contra seus hashes de origem.
+
+Limites: testes locais automatizados, sem sessão manual completa do assistente,
+sem Windows 10 real/VM disponível e sem impressão física. PATH limpo e auditoria
+de módulos não equivalem a um Windows recém-instalado. O erro específico do MSI
+relatado não foi reproduzido sem sua mensagem/log. Instalador e aplicativo sem
+assinatura digital de editor.
+
 ## Compatibilidade Windows 10 — revisão 1.3.1
 
 - **141 testes aprovados** em 07/10/2026. Incluem os limites Windows 10 1809,

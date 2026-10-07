@@ -1,6 +1,6 @@
 # Fontes e substituição de bibliotecas
 
-Distribuição: EFTX Tilt 1.3.1 para Windows 10 1809+ / Windows 11 x64. Bibliotecas não modificadas.
+Distribuição: EFTX Tilt 1.3.2 para Windows 10 1809+ / Windows 11 x64. Bibliotecas não modificadas.
 Consulta às fontes oficiais: 7 de outubro de 2026.
 
 ## Fontes correspondentes
@@ -16,10 +16,13 @@ componentes incorporados, inclusive PDFium e bibliotecas de formatos de imagem.
 - [OpenSSL 3.6.4, referência histórica do pacote 1.3.0; DLLs excluídas de 1.3.1](https://github.com/openssl/openssl/tree/openssl-3.6.4).
 - [PyInstaller 6.22.3, incluindo bootloader](https://github.com/pyinstaller/pyinstaller/tree/v6.22.3).
 - [WiX Toolset 5.0.2, incluindo biblioteca de diálogos](https://github.com/wixtoolset/wix/tree/v5.0.2).
+- [NSIS 3.12, fontes do instalador EXE](https://sourceforge.net/projects/nsis/files/NSIS%203/3.12/nsis-3.12-src.tar.bz2/download).
 - [SQLite: código e domínio público](https://sqlite.org/copyright.html).
 - [Microsoft: bibliotecas de runtime redistribuíveis](https://learn.microsoft.com/cpp/windows/redistributing-visual-cpp-files).
 
-O instalador utiliza WiX 5.0.2 (MS-RL), fixado no manifesto `dotnet-tools.json`.
+O instalador EXE utiliza NSIS 3.12. O build fixa o hash do compilador portátil;
+o espelho MacPorts fornece o mesmo arquivo quando SourceForge não está acessível.
+Os instaladores MSI anteriores utilizam WiX 5.0.2 (MS-RL), fixado no manifesto `dotnet-tools.json`.
 Não utiliza WiX 6/7 nem presume contratação ou aceite da OSMF dessas versões.
 
 ## Recombinação com bibliotecas modificadas

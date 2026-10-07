@@ -10,3 +10,18 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install -e '.[dev]'
       - run: python -m pytest -q
+  installer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.10'
+      - name: Prepare isolated build environment
+        run: |
+          python -m venv .venv
+          .\.venv\Scripts\python.exe -m pip install -e '.[dev]'
+      - name: Build offline EXE
+        run: .\build_setup.ps1
+      - name: Install, run PDF preview, reinstall and uninstall
+        run: .\tools\test_setup.ps1

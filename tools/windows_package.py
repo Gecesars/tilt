@@ -36,3 +36,26 @@ def filter_windows_binaries(binaries, allowed_roots):
             raise ValueError('DLL fora do Python/Qt/Windows autorizado: '+entry[0])
         result.append(entry)
     return result
+
+
+def consolidate_msvc(binaries):
+    """Put one newest bundled copy of each CRT DLL in the bootstrap directory."""
+    import pefile
+    groups = {}
+    result = []
+    for entry in binaries:
+        name = Path(entry[0]).name.casefold()
+        if name.startswith(('vcruntime140', 'msvcp140', 'concrt140')) and name.endswith('.dll'):
+            with pefile.PE(entry[1], fast_load=False) as pe:
+                info = pe.VS_FIXEDFILEINFO[0]
+                version = (info.FileVersionMS, info.FileVersionLS)
+            previous = groups.get(name)
+            if previous is None or version > previous[0]:
+                groups[name] = (version, entry[1])
+        else:
+            result.append(entry)
+    required = {'vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll', 'msvcp140_1.dll', 'msvcp140_2.dll'}
+    if not required.issubset(groups):
+        raise ValueError('Runtime Visual C++ incompleto: '+str(sorted(required-groups.keys())))
+    result.extend((name, source, 'BINARY') for name, (_, source) in sorted(groups.items()))
+    return result

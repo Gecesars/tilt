@@ -2,100 +2,110 @@
 
 ## Usuário final
 
-Em [Releases](https://github.com/Gecesars/tilt/releases), baixe
-`EFTX_Tilt-1.3.1-Windows-x64.msi`. O assistente em português apresenta os termos
-EFTX e solicita aceite. Uso permitido somente para EFTX e pessoas/organizações
-autorizadas por escrito, conforme `LICENSE.txt`.
+Em [Releases](https://github.com/Gecesars/tilt/releases/latest), baixe
+**`EFTX_Tilt-1.3.2-Setup-x64.exe`**. Abra o arquivo, leia e aceite os termos EFTX,
+confirme a pasta e conclua. Abra **EFTX Tilt Desktop** pelo menu Iniciar ou pelo
+atalho na área de trabalho. Uso restrito à EFTX e a usuários autorizados por
+escrito, conforme `LICENSE.txt`.
 
-Requer **Windows 10 1809 ou posterior (build 17763+), 64 bits x64**, ou Windows
-11 x64. Windows 10 22H2 e LTSC 2019/2021 atendem ao requisito. Não há pacote de
-32 bits. Python, Qt e runtime Visual C++ necessários estão incluídos; .NET e
-WiX são ferramentas de compilação e não são necessários no computador do usuário.
-Leia [compatibilidade Windows](windows_compatibilidade.md) para a base técnica e
-o estado da validação em cada sistema.
+Requer **Windows 10 1809 ou posterior (build 17763+), x64**, ou Windows 11 x64.
+O instalador é offline e inclui Python 3.12.10, Qt/PySide6 6.11.2, Qt PDF,
+SQLite, catálogo de cabos, logo e as DLLs redistribuíveis Visual C++ necessárias.
+Não é necessário instalar Python, Qt, .NET ou Visual C++ separadamente.
+As APIs de sistema, UCRT e ICU são fornecidas pelo próprio Windows.
+Leia a [base técnica e os limites de validação](windows_compatibilidade.md).
 
 Instalação por usuário, sem serviço ou tarefa agendada. Pasta padrão:
-`%LOCALAPPDATA%\Programs\EFTX\Tilt`. Atalhos: menu Iniciar, área de trabalho e
-licença no menu EFTX. Use Aplicativos Instalados do Windows para reparar/remover.
-O MSI não inclui nem remove os projetos em
-`%LOCALAPPDATA%\EFTX\EFTX Tilt\tilt.sqlite3`; faça backup desse arquivo separadamente.
-Arquivos extras que você colocar na pasta do programa não são removidos.
+`%LOCALAPPDATA%\Programs\EFTX\Tilt-Desktop`. O EXE usa NSIS e não chama o MSI
+nem depende do Windows Installer. Uma instalação MSI anterior pode permanecer:
+as pastas e os atalhos são separados, mas os projetos continuam no mesmo banco
+`%LOCALAPPDATA%\EFTX\EFTX Tilt\tilt.sqlite3`. Feche as versões anteriores antes
+de usar a nova. Não escolha a pasta antiga do MSI para o novo instalador.
+
+Para restaurar arquivos, feche o aplicativo e execute o EXE novamente na mesma
+pasta. Para remover, use **EFTX Tilt Desktop** em Aplicativos Instalados do
+Windows ou o atalho **Desinstalar**. A remoção preserva o banco e arquivos extras
+que você colocou na pasta. Faça backup do banco separadamente.
+
+O ZIP portátil contém o mesmo aplicativo: extraia toda a pasta antes de executar
+`EFTX_Tilt.exe`. Não há atualização automática. Bibliotecas Qt/PySide são
+substituíveis conforme `licenses/SOURCES.md`; reinstalar restaura os originais,
+por isso preserve suas modificações antes de reinstalar.
 
 Após ler os termos e obter autorização, instalação silenciosa:
 
 ```powershell
-msiexec /i EFTX_Tilt-1.3.1-Windows-x64.msi /qn /norestart EFTX_ACCEPT_LICENSE=1
+.\EFTX_Tilt-1.3.2-Setup-x64.exe /S /ACCEPTEULA=1
 ```
 
-Sem essa propriedade, instalações com interface reduzida ou silenciosas são
-bloqueadas. Ela declara o aceite; não é chave de ativação. Na interface completa,
-a caixa de aceite controla o avanço do assistente.
+Sem `/ACCEPTEULA=1`, a instalação silenciosa retorna 1603 sem instalar.
+O parâmetro declara aceite; não é chave de ativação. A interface completa exige
+marcar a caixa da licença. Para pasta personalizada, `/D=C:\Pasta escolhida`
+deve ser o último argumento, sem aspas, conforme a sintaxe NSIS.
 
-O ZIP portátil contém o mesmo aplicativo e avisos de licença. Extraia toda a
-pasta antes de executar. Não há atualização automática. Feche o programa antes
-de atualizar ou reparar seus arquivos. Bibliotecas Qt/PySide são compartilhadas
-e substituíveis conforme `licenses/SOURCES.md`; reparação manual restaura os
-originais, por isso preserve suas modificações antes de reparar.
-
-Compare o SHA-256 do arquivo baixado com `SHA256SUMS.txt` publicado na mesma
-release. O hash verifica integridade; não substitui assinatura digital de editor.
-O MSI e o executável desta versão não estão assinados.
+Compare o SHA-256 com `SHA256SUMS.txt` da mesma release:
 
 ```powershell
-Get-FileHash .\EFTX_Tilt-1.3.1-Windows-x64.msi -Algorithm SHA256
+Get-FileHash .\EFTX_Tilt-1.3.2-Setup-x64.exe -Algorithm SHA256
 ```
+
+O instalador e o aplicativo não têm assinatura digital de editor. O hash
+confere integridade; não substitui assinatura nem dispensa políticas locais.
 
 ## Manutenção
 
-Requer Windows x64, Python 3.12, dependências de desenvolvimento e SDK .NET com
-runtime compatível. O manifesto local fixa WiX **5.0.2**, sob MS-RL, e a extensão
-`WixToolset.UI.wixext/5.0.2`. Não se presume aceite de termos comerciais de outras
-versões WiX. O aplicativo utiliza Qt/PySide 6.11.2 com os avisos LGPL e de terceiros
-incluídos; o plugin GPL exclusivo Qt Virtual Keyboard, que não é utilizado, foi
-excluído do pacote.
+Requer Windows x64, Python 3.12 e dependências de desenvolvimento:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\instalar.ps1
-powershell -ExecutionPolicy Bypass -File .\build_installer.ps1
+powershell -ExecutionPolicy Bypass -File .\build_setup.ps1
 ```
 
-O script cria o aplicativo em `dist/release/1.3.1/EFTX_Tilt`, prepara licença RTF,
-imagens derivadas do logo aprovado, inventário SHA-256 e componentes WiX em
-`build/installer/1.3.1`, e gera o MSI em `dist/`. Para alterar somente o instalador
-com o payload já existente, use `-SkipApplicationBuild`. A invocação direta da
-DLL restaurada do WiX evita a perda de argumentos `-d` observada no dispatcher
-de ferramentas do SDK .NET 10. A validação ICE permanece habilitada.
+O build baixa o compilador portátil **NSIS 3.12** para `build/tools`, somente
+se necessário, e exige SHA-256 fixado em `tools/fetch_nsis.py`. SourceForge é
+a origem primária; o espelho MacPorts fornece o mesmo arquivo verificado.
+Não instala o compilador no sistema. O computador de destino não precisa de rede.
 
-O UpgradeCode é fixo. ProductCode muda com a versão, e os GUIDs dos componentes
-são estáveis por caminho. Não substitua uma release publicada com outro conteúdo
-sob a mesma versão; incremente `tilt.__version__` antes de publicar uma revisão.
-Versões mais antigas do MSI são bloqueadas quando uma mais recente está instalada.
+O aplicativo fica em `dist/release/1.3.2/EFTX_Tilt`. Licença RTF, ícone EFTX,
+inventário SHA-256 e listas explícitas de instalação/remoção ficam em
+`build/installer/1.3.2`. O EXE fica em `dist/`. Use `-SkipApplicationBuild`
+somente quando o payload não mudou. A compilação NSIS usa UTF-8 explícito e
+trata avisos como erros. `build_installer.ps1` e WiX permanecem como referências
+para os MSIs históricos; a distribuição 1.3.2 usa EXE.
 
-`tools/update_license_notices.py` atualiza os textos de licença a partir de fontes
-oficiais; `licenses/manifest.json` registra origem e hash. Revisar essas fontes e
-versões ao mudar dependências, preservando avisos incorporados. `LICENSE.txt`
-restringe apenas componentes próprios EFTX.
+O pacote consolida a cópia mais recente de cada DLL MSVC incorporada pelo
+Python/Qt em `_internal`. A busca do empacotador não usa dependências de outros
+aplicativos no PATH. Qt Virtual Keyboard/QML/Quick não utilizados ficam excluídos.
+Licenças e fontes de terceiros acompanham o pacote, inclusive NSIS.
 
 ## Verificação antes da publicação
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q
-powershell -ExecutionPolicy Bypass -File .\tools\test_installer.ps1
-powershell -ExecutionPolicy Bypass -File .\tools\test_installer.ps1 -UpgradeFrom 1.3.0
+powershell -ExecutionPolicy Bypass -File .\tools\test_setup.ps1
+.\.venv\Scripts\python.exe tools/package_release.py
 git diff --check
 ```
 
-O teste MSI exige que essa versão ainda não esteja instalada e que seus atalhos
-não preexistam; prefira uma conta de teste. Instala em uma pasta exclusiva dentro
-de `.artifacts/`, confere hashes, executa o aplicativo e a prévia PDF em Qt
-offscreen/Windows, remove um arquivo próprio para testar reparação e desinstala
-somente o ProductCode testado. Confere que os dados e atalhos preexistentes na
-pasta EFTX não mudaram. Logs, PDFs, bancos de teste e resultados ficam nessa pasta.
-Com `-UpgradeFrom`, requer o MSI anterior em `dist/` e verifica atualização,
-preservação do caminho escolhido e remoção das DLLs obsoletas.
+O teste exige ausência da instalação e dos atalhos EXE; use uma conta de teste
+quando necessário. Instala em pasta exclusiva com espaços dentro de `.artifacts`,
+compara todos os arquivos com o inventário, verifica o atalho e executa o programa
+nos plugins Qt offscreen e Windows. Limpa referências Python/Qt do ambiente e
+limita PATH ao Windows. O diagnóstico registra o caminho real das DLLs carregadas
+e rejeita runtime Python/Qt/MSVC/SQLite fora da pasta instalada. Gera PDF e prévia,
+remove um arquivo próprio para testar reinstalação e desinstala o produto testado.
+Verifica preservação dos dados reais, atalhos EFTX anteriores e arquivo extra.
 
-Execute `.\.venv\Scripts\python.exe tools/package_release.py` para criar o ZIP
-a partir do mesmo payload do MSI, conferir CRC e hashes e gerar `SHA256SUMS.txt`.
-Publique ambos na tag correspondente ao commit da `main` com CI
-aprovado. Não inclua SQLite, logs privados, credenciais ou arquivos de trabalho.
-Evidências efetivamente executadas estão em [validação](validacao.md).
+Os JSONs de diagnóstico contêm caminhos locais e ficam fora do Git. A opção
+`--smoke-diagnostics arquivo.json` exige `--smoke-test`; não coleta dados no uso
+normal. O CI também constrói e testa o EXE em um runner Windows separado;
+`windows-latest` é Windows Server, não validação em Windows 10 cliente.
+
+`package_release.py` confere o payload contra o inventário, gera o ZIP, valida
+CRC e SHA-256 de cada entrada e escreve `SHA256SUMS.txt`. Publique EXE, ZIP,
+licença, avisos e hashes na tag do commit com CI aprovado. Não substitua os bytes
+de uma release publicada; incremente a versão. Não publique bancos ou logs privados.
+
+Evidências executadas: [validacao.md](validacao.md). O erro específico do MSI
+relatado pelo usuário não foi reproduzido sem sua mensagem/log; o EXE oferece
+uma instalação independente dessa tecnologia.

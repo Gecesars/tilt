@@ -340,6 +340,11 @@
       "file": "PyInstaller-bootloader.txt",
       "source": "installed distribution: COPYING.txt",
       "sha256": "0598064c7d2718e38d7914a7d08343b2fa008e3bea9ebba2aa7a6ffa5900dd64"
+    },
+    {
+      "file": "NSIS-COPYING.txt",
+      "source": "https://sourceforge.net/projects/nsis/files/NSIS%203/3.12/nsis-3.12.zip/download",
+      "sha256": "388357c1215ff403c5ebde3a5ecd273e68f8b79a579996775245d1ee65442aba"
     }
   ]
 }

@@ -78,6 +78,13 @@ def main():
     }
     for name, path in local.items():
         results.append((name, 'installed distribution: '+path.name, path.read_bytes()))
+    # NSIS is pinned independently from the Python/Qt environment.
+    nsis_notice = (OUT/'NSIS-COPYING.txt').read_bytes()
+    if hashlib.sha256(nsis_notice).hexdigest() != '388357c1215ff403c5ebde3a5ecd273e68f8b79a579996775245d1ee65442aba':
+        raise ValueError('Revisar aviso NSIS e hash ao alterar a versão do compilador.')
+    results.append(('NSIS-COPYING.txt',
+                    'https://sourceforge.net/projects/nsis/files/NSIS%203/3.12/nsis-3.12.zip/download',
+                    nsis_notice))
     manifest = []
     for name, url, data in results:
         (OUT/name).write_bytes(data)

@@ -10,9 +10,11 @@ Identidade visual: logo **EFTX ANTENNAS** fornecido pelo usuário.
   11 x64. Inclui Windows 10 22H2 e LTSC 2019/2021. Consulte a
   [compatibilidade e seus limites de validação](docs/windows_compatibilidade.md).
 - Ambiente preparado: abra **`iniciar.cmd`**.
-- Baixe o **MSI para Windows x64** em [Releases](https://github.com/Gecesars/tilt/releases).
+- Baixe o **instalador EXE offline para Windows x64** em [Releases](https://github.com/Gecesars/tilt/releases).
   Leia e aceite a licença, escolha a pasta e conclua. O programa cria atalhos no
-  menu Iniciar e na área de trabalho; não é necessário instalar Python.
+  menu Iniciar e na área de trabalho, com o nome **EFTX Tilt Desktop**.
+  Python, Qt, SQLite e runtime Visual C++ estão incluídos; não há download
+  de dependências durante a instalação.
 - Distribuição portátil: extraia todo o ZIP e abra **`EFTX_Tilt/EFTX_Tilt.exe`**.
   Mantenha `_internal`, `LICENSE.txt`, `THIRD_PARTY_NOTICES.md` e `licenses/` na pasta.
 - Instalação a partir do código (Python 3.11 ou superior):
@@ -30,10 +32,12 @@ Para definir outro banco:
 .\.venv\Scripts\python.exe -m tilt --database D:\projetos\meu_tilt.sqlite3
 ```
 
-O MSI instala para o usuário atual em `%LOCALAPPDATA%/Programs/EFTX/Tilt` por
-padrão. Reparar ou desinstalar o programa preserva o banco no diretório de dados.
+O EXE instala para o usuário atual em `%LOCALAPPDATA%/Programs/EFTX/Tilt-Desktop`
+por padrão. Reinstalar ou desinstalar preserva o banco no diretório de dados.
+Uma instalação MSI anterior pode permanecer; a nova versão usa os mesmos projetos
+e atalhos próprios, sem depender do estado do Windows Installer.
 Consulte [instalação e empacotamento](docs/instalador.md) para uso silencioso,
-geração do MSI e validação de integridade. Esta distribuição não possui assinatura
+geração do EXE e validação de integridade. Esta distribuição não possui assinatura
 digital de editor.
 
 ## Licença
@@ -175,7 +179,8 @@ aproximação analítica do elemento selecionado; não é ganho em dBi ou diagra
 .\.venv\Scripts\python.exe -m tilt --database .artifacts/smoke.sqlite3 --smoke-test
 .\.venv\Scripts\python.exe -m tilt --database .artifacts/smoke.sqlite3 --smoke-test --smoke-pdf .artifacts/smoke.pdf
 powershell -ExecutionPolicy Bypass -File .\build_windows.ps1
-powershell -ExecutionPolicy Bypass -File .\build_installer.ps1
+powershell -ExecutionPolicy Bypass -File .\build_setup.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\test_setup.ps1
 ```
 
 Os testes cobrem paridade numérica com XLS, sentido do feixe, orçamento de

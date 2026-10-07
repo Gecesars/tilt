@@ -19,9 +19,10 @@ def main():
     parser.add_argument('--database', type=Path, help='Banco SQLite alternativo para bancada/teste')
     parser.add_argument('--smoke-test', action='store_true', help='Abre e encerra após a primeira renderização')
     parser.add_argument('--smoke-pdf', type=Path, help='Com --smoke-test, gera um PDF de exemplo e testa sua prévia; não imprime')
+    parser.add_argument('--smoke-diagnostics', type=Path, help='Com --smoke-test, grava versões e caminhos locais das DLLs carregadas')
     args = parser.parse_args()
-    if args.smoke_pdf and not args.smoke_test:
-        parser.error('--smoke-pdf requer --smoke-test')
+    if (args.smoke_pdf or args.smoke_diagnostics) and not args.smoke_test:
+        parser.error('--smoke-pdf e --smoke-diagnostics requerem --smoke-test')
     app = QApplication(sys.argv[:1])
     # Windows' offscreen Qt plugin does not enumerate fonts. Keep diagnostic
     # PDFs readable while native Windows continues to use its normal font set.
@@ -50,6 +51,11 @@ def main():
             window.write_pdf(args.smoke_pdf)
             preview = PrintPreview(args.smoke_pdf, window)
             preview.show()
+        if args.smoke_diagnostics:
+            from .diagnostics import write_diagnostics
+            if not write_diagnostics(args.smoke_diagnostics):
+                db.close()
+                return 3
         QTimer.singleShot(1200, app.quit)
     code = app.exec()
     db.close()

@@ -1,4 +1,4 @@
-"""Package and verify the already-built MSI payload, then write release checksums."""
+"""Package and verify the already-built EXE payload, then write release checksums."""
 import hashlib
 import json
 from pathlib import Path
@@ -14,15 +14,15 @@ from tilt import __version__
 def main():
     dist = ROOT/'dist'
     payload = dist/'release'/__version__/'EFTX_Tilt'
-    msi = dist/f'EFTX_Tilt-{__version__}-Windows-x64.msi'
-    if not msi.is_file():
-        raise FileNotFoundError('Gere o MSI antes de preparar a release.')
+    setup = dist/f'EFTX_Tilt-{__version__}-Setup-x64.exe'
+    if not setup.is_file():
+        raise FileNotFoundError('Gere o instalador EXE antes de preparar a release.')
     inventory = json.loads((ROOT/'build/installer'/__version__/'payload-manifest.json').read_text(encoding='utf-8'))
     expected = {item['path']: item['sha256'] for item in inventory['files']}
     actual = {p.relative_to(payload).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
               for p in payload.rglob('*') if p.is_file()}
     if actual != expected:
-        raise ValueError('Payload mudou após gerar o MSI. Recompile antes de publicar.')
+        raise ValueError('Payload mudou após gerar o instalador. Recompile antes de publicar.')
     archive = dist/f'EFTX_Tilt-{__version__}-Windows-x64.zip'
     with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as writer:
         for relative in sorted(expected):
@@ -35,7 +35,7 @@ def main():
                 raise ValueError('Hash inválido no ZIP: '+relative)
     for name in ('LICENSE.txt', 'THIRD_PARTY_NOTICES.md'):
         shutil.copy2(ROOT/name, dist/name)
-    artifacts = [msi, archive, dist/'LICENSE.txt', dist/'THIRD_PARTY_NOTICES.md']
+    artifacts = [setup, archive, dist/'LICENSE.txt', dist/'THIRD_PARTY_NOTICES.md']
     checksums = ''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n' for p in artifacts)
     (dist/'SHA256SUMS.txt').write_text(checksums, encoding='ascii')
     print(json.dumps({'version': __version__, 'verified_files': len(expected),
