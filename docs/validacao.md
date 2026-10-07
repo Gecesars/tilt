@@ -3,6 +3,42 @@
 Ambiente: Windows 11 x64, Python 3.12.10, PySide6 6.11.2,
 SQLite da biblioteca padrão, PyInstaller 6.22.3.
 
+## Cálculos, diagramas e impressão 1.2.0
+
+- **104 testes aprovados**. Mantida a paridade com as duas planilhas; acrescida
+  comparação independente do fator de arranjo com a solução fechada de um
+  arranjo uniforme. Somatórios de campo, coerência e potência usam `math.fsum`.
+- Preenchimento de `d = λ₀`: frequência decimal, canal, deslocamento OFDM e
+  constante SI conferidos com tolerância absoluta de `1e-9 mm`. Trocar cabo
+  por linha rígida não aplica o VF ao espaçamento livre.
+- Edição manual, retorno ao automático, entradas inválidas e reabertura de
+  projetos antigos sem `spacing_auto` verificados. Exemplos XLS permanecem
+  com o espaçamento original e modo manual.
+- Aba Diagramas: limites válidos/inválidos, normalização independente do zoom,
+  direção do tilt, alvo fora da faixa e amostragem limitada em abertura extrema.
+  Comparação após corte/ideal/sem tilt, em dB e campo relativo.
+- PDF gerado e lido com QtPdf e pypdf: cinco páginas nos exemplos de quatro
+  antenas, entradas, resultados, versões, catálogo, tabela, memória e figuras.
+  PDFs de cabo e linha rígida renderizados com Poppler e inspecionados.
+- Caso de 64 antenas: presença de E1 até E64, perdas desconhecidas como `n/d`,
+  paginação da tabela e repetição de cabeçalhos conferidas.
+- Impressão testada com saída para arquivo: intervalo, ordem inversa, cópias,
+  aceitação e cancelamento do diálogo. Sem impressora, PDF/prévia disponíveis
+  e envio desabilitado. Alteração de entradas bloqueia impressão de resultado
+  desatualizado; falha de gravação não abre a prévia.
+- Executável final em `dist/1.2.0/EFTX_Tilt`: inicialização, PDF e prévia
+  testados com Qt offscreen e Windows nativo. Ambos retornaram código 0,
+  PDF com texto/valores corretos e catálogo com 47 modelos e 1669 amostras.
+- Corrigida a ausência de fontes no plugin Windows offscreen também no
+  caminho de diagnóstico do executável. Corrigida a aplicação duplicada de
+  margens do QPrinter e QTextDocument para evitar páginas residuais.
+- `compileall` e `git diff --check` executados. PyInstaller inclui QtPdf.
+
+Não foi enviada nenhuma página a impressora física. A seleção da impressora
+padrão e a prévia foram verificadas; papel, driver físico, duplex e qualidade
+da impressão real permanecem sem validação. Os limites RF descritos abaixo
+continuam válidos.
+
 ## Interface 1.1.0 — revisão para uso por leigos
 
 - **77 testes aprovados**, incluindo os 64 testes da versão anterior.

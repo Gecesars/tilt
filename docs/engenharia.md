@@ -124,6 +124,63 @@ de obrigação regulatória.
 As planilhas usam c = 300.000.000 m/s. A opção SI usa 299.792.458 m/s.
 Mudar c ou f altera λ e fase, mas não ΔL para d, VF e θ constantes.
 
+## Espaçamento automático e compatibilidade
+
+O aplicativo 1.2 inicia com `d = λ₀ = c/f`, no espaço livre. A distância em mm
+é atualizada ao trocar frequência, canal, deslocamento OFDM ou constante c.
+O fator de velocidade só entra em λg e nos comprimentos de alimentação.
+No modo automático, mudar a frequência também muda d e, portanto, ΔL.
+Editar a distância desliga o acompanhamento automático; marcá-lo novamente
+restaura 1 λ. A opção é uma conveniência de preenchimento, não uma otimização
+de ganho, nulos ou lóbulos de grade.
+
+A UI preserva até nove casas decimais em mm no preenchimento automático.
+O payload de projeto permanece na versão 1 e ganha a chave opcional
+`spacing_auto`. Ausência dessa chave significa **manual**, preservando os
+espaçamentos de revisões anteriores e dos exemplos das planilhas.
+
+## Diagramas verticais e precisão numérica
+
+O motor RF 1.1 mantém as equações e os casos das planilhas. Usa somas compensadas
+(`math.fsum`) para potência e componentes de campo/coerência. A avaliação do
+diagrama aceita sequências ou iteradores de ângulos, rejeitando não finitos e
+elevações fora de −90° a +90°.
+
+O fator de campo usa `|Σ aᵢ exp(jψᵢ)| / Σ aᵢ`, convertido por `20 log10`, com
+piso de −60 dB. A referência é o limite coerente das amplitudes de cada curva,
+não o maior ponto amostrado na janela. Alterar o eixo X nunca renormaliza níveis.
+O caso sem tilt mantém as amplitudes e zera as fases; o caso ideal remove apenas
+o arredondamento dos comprimentos e recalcula suas perdas.
+
+A grade considera abertura em comprimentos de onda e largura angular: ao menos
+1801 pontos e 32 amostras por ciclo espacial mais rápido, limitada a 12001 pontos,
+mais as direções solicitada e ajustada. Arranjos extremos exibem aviso quando
+atingem esse limite. Reduzir a faixa aumenta a resolução angular. As métricas de
+fase, coerência e progressão após corte são independentes dessa amostragem visual.
+
+O gráfico é exclusivamente vertical; o eixo é **elevação**, com zero no horizonte
+e ângulos negativos abaixo dele. O tilt positivo de entrada aparece em elevação
+negativa. A faixa é uma preferência de visualização e não modifica o projeto RF.
+
+## Relatório e impressão
+
+O PDF A4 usa os últimos resultados calculados, com metadados, entradas, tabela
+completa, equações, avisos, corte vertical completo e detalhado, esquema e hash
+do catálogo. Na faixa completa, a segunda figura amplia ±10° em torno do tilt;
+quando o usuário aplica outra faixa, ela é respeitada no relatório.
+
+O PDF original contém texto vetorial e figuras com o dobro da resolução de
+renderização. A prévia e a impressão leem suas páginas com QtPdf, preservando
+proporções, intervalo, ordem e cópias. A renderização para a impressora é limitada
+a 200 dpi por página para limitar memória; o PDF original permanece inalterado.
+O relatório é salvo antes de abrir a prévia. Cancelar o diálogo não imprime;
+ausência de impressora preserva a geração/visualização do PDF.
+
+Referências de implementação:
+[Qt, prévia e impressão](https://doc.qt.io/qtforpython-6/PySide6/QtPrintSupport/QPrintPreviewDialog.html),
+[Qt, impressora padrão](https://doc.qt.io/qtforpython-6/PySide6/QtPrintSupport/QPrinterInfo.html),
+[Qt, intervalos e cópias](https://doc.qt.io/qt-6/qprinter.html).
+
 ## Limites físicos
 
 - Padrão exibido: fator de arranjo de elementos isotrópicos, normalizado em dB de campo.

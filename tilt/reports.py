@@ -5,7 +5,8 @@ from html import escape
 import json
 from pathlib import Path
 
-from .engineering import Result
+from .engineering import ENGINE_VERSION, Result
+from . import __version__
 
 
 def fmt(value, digits=3):
@@ -13,7 +14,7 @@ def fmt(value, digits=3):
 
 
 def snapshot(result: Result, model: str, catalog_hash: str):
-    return {'schema_version': 1, 'engine_version': '1.0.0', 'model': model,
+    return {'schema_version': 1, 'engine_version': ENGINE_VERSION, 'model': model,
             'catalog_sha256': catalog_hash, 'result': asdict(result)}
 
 
@@ -21,7 +22,7 @@ def export_csv(path: Path, result: Result, model: str):
     d = result.design
     with path.open('w', encoding='utf-8-sig', newline='') as stream:
         writer = csv.writer(stream, delimiter=';')
-        writer.writerow(['EFTX Tilt', '1.0.0'])
+        writer.writerow(['EFTX Tilt', __version__])
         writer.writerow(['Modelo', model])
         for key, value in asdict(d).items():
             writer.writerow([key, '' if value is None else str(value).replace('.', ',')])
@@ -65,7 +66,11 @@ def report_html(result: Result, model: str, title: str):
     λ livre: {fmt(result.wavelength_m*1000)} mm · λ na linha: {fmt(result.guided_wavelength_m*1000)} mm<br>
     Eficiência de alimentação: {fmt(result.feed_efficiency*100 if result.feed_efficiency is not None else None)}% ·
     Coerência no alvo: {fmt(result.coherence_efficiency*100)}%<br>
-    Potência entregue: {fmt(result.total_power_w)} W · Perda equivalente: {fmt(result.equivalent_loss_db)} dB</p>
+    Potência entregue: {fmt(result.total_power_w)} W · Perda equivalente: {fmt(result.equivalent_loss_db)} dB<br>
+    Espaçamento / λ livre: {fmt(d.spacing_m/result.wavelength_m, 6)} ·
+    Atraso diferencial: {fmt(result.delay_step_ns, 6)} ns<br>
+    Tilt da progressão após corte: {fmt(result.fitted_tilt_deg, 6)}° ·
+    Erro máximo de fase após corte: {fmt(max(abs(e.phase_error_deg) for e in result.elements), 6)}°</p>
     <h2>Comprimentos entre planos de referência</h2>
     <p>E1 é o elemento inferior. Tilt positivo aponta para baixo. Fase positiva = avanço em relação a E1.</p>
     <table><thead><tr><th>Elemento</th><th>z (m)</th><th>Ideal (mm)</th><th>Corte (mm)</th>

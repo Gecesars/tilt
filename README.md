@@ -7,7 +7,7 @@ Identidade visual: logo **EFTX ANTENNAS** fornecido pelo usuário.
 ## Executar no Windows
 
 - Ambiente preparado: abra **`iniciar.cmd`**.
-- Distribuição portátil 1.1: abra **`dist/1.1.0/EFTX_Tilt/EFTX_Tilt.exe`**. A pasta
+- Distribuição portátil 1.2: abra **`dist/1.2.0/EFTX_Tilt/EFTX_Tilt.exe`**. A pasta
   `_internal` deve permanecer junto ao executável; não é necessário instalar Python.
 - Instalação a partir do código (Python 3.11 ou superior):
 
@@ -27,7 +27,8 @@ Para definir outro banco:
 ## Uso em três passos
 
 1. Clique em **Cabo coaxial** ou **Linha rígida** e escolha o modelo na lista.
-2. Informe a frequência em MHz **ou** o canal de TV.
+2. Informe a frequência em MHz **ou** o canal de TV. O espaçamento é preenchido
+   automaticamente com **1 λ no espaço livre (c/f)**, usando a constante escolhida.
 3. Informe a quantidade de antenas, a distância entre seus centros em mm,
    a inclinação desejada em graus e o trecho mais curto em metros.
 
@@ -41,7 +42,12 @@ o resumo indica o passo de corte e as perdas adicionais em uso. O modelo
 personalizado abre automaticamente os campos necessários. Um erro em um campo
 avançado abre o painel para permitir a correção.
 
-**Ver detalhes técnicos** abre fase, potência, curvas, tabela completa e memória
+Ao editar a distância, o modo passa para manual e novas frequências preservam
+essa medida. Marque **Espaçamento automático: 1 λ** para retomar o acompanhamento.
+Projetos antigos mantêm o espaçamento salvo. λ livre é diferente de λ na linha;
+o fator de velocidade do cabo não reduz a distância automática entre antenas.
+
+**Ver detalhes técnicos** abre fase, potência, perdas, tabela completa e memória
 de cálculo. **Salvar cálculo** (`Ctrl+S`) cria uma nova revisão no banco local.
 Ao abrir uma revisão, recalcule antes de exportar. **Exportar** gera PDF ilustrado,
 CSV com separador `;` ou JSON.
@@ -49,6 +55,33 @@ CSV com separador `;` ou JSON.
 O canal usa centro geométrico de 6 MHz; o deslocamento +1/7 MHz é opcional nos
 ajustes avançados. A seleção de material aplica um único modelo ao cálculo:
 cabo coaxial **ou** linha rígida, incluindo eventual trecho antes do divisor.
+
+## Diagramas verticais
+
+Na aba **Diagramas**, defina início/fim do eixo X entre **−90° e +90°** e clique
+**Aplicar faixa**. **Faixa completa** restaura os limites e **Focar no tilt**
+mostra ±10° em torno do alvo. O eixo representa **elevação**: valores negativos
+apontam para baixo. Não é azimute horizontal.
+
+As curvas mostram o resultado após o corte, o caso com comprimentos ideais e
+o caso sem tilt (fases zeradas, mesmas amplitudes). Escolha dB ou campo relativo.
+Mudar a faixa altera apenas a visualização; não recalcula comprimentos nem
+renormaliza os níveis. O gráfico indica lóbulos de grade e limitações de amostragem.
+
+## PDF e impressão
+
+**Imprimir…** (`Ctrl+P`) gera o PDF detalhado em
+`Documentos/EFTX Tilt/Relatorios` com nome datado e abre sua prévia. Ela usa a
+impressora padrão do Windows e permite navegar pelas páginas, ampliar e abrir
+o PDF. **Imprimir…** na prévia abre o diálogo do sistema para escolher impressora,
+páginas e cópias; cancelar não envia o trabalho. Sem impressora configurada,
+o PDF e a prévia continuam disponíveis.
+
+O relatório contém entradas e modo de espaçamento, resultados, tabela completa,
+memória de cálculo, avisos, diagrama completo e faixa selecionada, esquema de
+montagem, versão e identificação do catálogo. Se a tela estiver na faixa completa,
+o PDF também inclui uma ampliação automática do tilt. A prévia e a impressão
+usam as páginas do PDF salvo, sem recalcular o projeto.
 
 Entradas numéricas aceitam vírgula ou ponto decimal, sem separadores de milhar.
 Valores inválidos são rejeitados. Alterar uma entrada desativa os resultados
@@ -94,6 +127,7 @@ não ganho em dBi nem diagrama de uma antena medida.
 .\.venv\Scripts\python.exe -m pytest -q
 .\.venv\Scripts\python.exe tools/visual_check.py
 .\.venv\Scripts\python.exe -m tilt --database .artifacts/smoke.sqlite3 --smoke-test
+.\.venv\Scripts\python.exe -m tilt --database .artifacts/smoke.sqlite3 --smoke-test --smoke-pdf .artifacts/smoke.pdf
 powershell -ExecutionPolicy Bypass -File .\build_windows.ps1
 ```
 
@@ -113,6 +147,8 @@ tilt/engineering.py    equações RF e validação, independentes de Qt
 tilt/storage.py        catálogo e revisões SQLite
 tilt/window.py         bancada, catálogo, projetos e exportações
 tilt/workbench.py      fluxo simples e painéis avançados
+tilt/diagrams.py       diagramas verticais e faixa angular
+tilt/printing.py       PDF detalhado e prévia/impressão nativa
 tilt/theme.py          contraste de controles e paleta clara explícita
 tilt/visuals.py        ilustrações e gráficos vetoriais Qt
 tilt/reports.py        memória HTML, CSV e JSON

@@ -16,25 +16,6 @@ from tilt.reports import export_csv, export_json, report_html, snapshot
 from tilt.reports import fmt
 
 
-@pytest.fixture(scope='session')
-def app():
-    app = QApplication.instance() or QApplication([])
-    if not QFontDatabase.families() and os.name == 'nt':
-        QFontDatabase.addApplicationFont(os.path.join(os.environ.get('WINDIR', 'C:/Windows'), 'Fonts', 'segoeui.ttf'))
-    return app
-
-
-@pytest.fixture
-def window(app):
-    db = Database(':memory:')
-    widget = MainWindow(db)
-    widget.show()
-    app.processEvents()
-    yield widget
-    widget.close()
-    db.close()
-
-
 def test_edit_invalidates_and_blocks_stale_export(window, app):
     assert window.result is not None
     field = window.fields['tilt_deg']
@@ -157,7 +138,8 @@ def test_collapsing_details_preserves_calculation_and_all_inputs(window):
     window.advanced_button.setChecked(False)
     window.technical_button.setChecked(True)
     assert window.result_tabs.isTabVisible(3)
-    assert window.result_detail_stack.currentIndex() == 1
+    assert window.result_detail_stack.currentIndex() == 0
+    assert window.pages.tabText(window.pages.indexOf(window.diagrams)) == 'Diagramas'
     window.result_tabs.setCurrentIndex(2)
     window.technical_button.setChecked(False)
     assert window.result_tabs.currentIndex() == 0
@@ -241,3 +223,79 @@ def test_control_palette_is_readable_even_after_dark_system_palette(app):
     finally:
         widget.close()
         db.close()
+
+
+def test_spacing_uses_free_space_lambda_and_tracks_frequency_channel_and_c(window):
+    from tilt.engineering import C_SI
+    assert window.auto_spacing.isChecked()
+    assert window.number('spacing_mm') == pytest.approx(300000/623, abs=1e-9)
+    window.fields['frequency_mhz'].setText('600,5')
+    assert window.number('spacing_mm') == pytest.approx(300000/600.5, abs=1e-9)
+    window.frequency_mode.setCurrentIndex(1)
+    window.channel.setValue(14)
+    assert window.number('spacing_mm') == pytest.approx(300000/473, abs=1e-9)
+    window.ofdm_offset.setChecked(True)
+    window.speed.setCurrentIndex(1)
+    assert window.number('spacing_mm') == pytest.approx(C_SI/(1000*(473+1/7)), abs=1e-9)
+    window.kind_buttons.button(1).click()
+    assert window.number('spacing_mm') == pytest.approx(C_SI/(1000*(473+1/7)), abs=1e-9)
+
+
+def test_manual_spacing_is_not_overwritten_by_frequency_changes(window, app):
+    field = window.fields['spacing_mm']
+    field.setFocus()
+    field.selectAll()
+    QTest.keyClicks(field, '750,25')
+    assert not window.auto_spacing.isChecked()
+    window.fields['frequency_mhz'].setText('700')
+    assert window.number('spacing_mm') == 750.25
+    window.auto_spacing.setChecked(True)
+    assert window.number('spacing_mm') == pytest.approx(300000/700, abs=1e-9)
+
+
+def test_old_project_without_auto_spacing_retains_saved_distance(window):
+    payload = window.calculated_payload.copy()
+    payload.pop('spacing_auto')
+    payload['design'] = {**payload['design'], 'spacing_m': .75}
+    window.restore_payload(payload, 'Projeto antigo')
+    assert not window.auto_spacing.isChecked()
+    assert window.number('spacing_mm') == 750
+    window.fields['frequency_mhz'].setText('700')
+    assert window.number('spacing_mm') == 750
+
+
+def test_auto_spacing_round_trip_and_invalid_frequency(window):
+    payload = window.calculated_payload.copy()
+    window.auto_spacing.setChecked(False)
+    window.restore_payload(payload, 'Automático')
+    assert window.auto_spacing.isChecked()
+    window.fields['frequency_mhz'].setText('0')
+    assert not window.run_calculation()
+    assert not window.print_button.isEnabled()
+    assert not window.diagrams.db_chart.series
+    window.fields['frequency_mhz'].setText('600')
+    assert window.number('spacing_mm') == 500
+    assert window.run_calculation()
+
+
+def test_diagram_range_changes_view_only_and_blocks_invalid_ranges(window):
+    result, payload = window.result, window.calculated_payload.copy()
+    page = window.diagrams
+    page.set_range(-12.5, 4.5)
+    assert page.view_range == (-12.5, 4.5)
+    assert page.db_chart.x_bounds == page.view_range
+    assert page.linear_chart.x_bounds == page.view_range
+    assert min(page.db_chart.series[0][1]) == -12.5
+    assert max(page.db_chart.series[0][1]) == 4.5
+    assert window.result is result
+    assert window.calculated_payload == payload
+    page.start.setText('5')
+    page.stop.setText('-5')
+    assert not page.apply_range()
+    assert page.view_range == (-12.5, 4.5)
+    page.start.setText('nan')
+    assert not page.apply_range()
+    page.focus_tilt()
+    assert page.view_range == (-12, 8)
+    page.set_range(10, 20)
+    assert 'fora da faixa' in page.notice.text()

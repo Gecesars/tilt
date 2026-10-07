@@ -8,6 +8,7 @@ import math
 
 C_SI = 299_792_458.0
 C_WORKSHEET = 300_000_000.0
+ENGINE_VERSION = '1.1.0'
 
 
 def finite(value, label):
@@ -41,6 +42,16 @@ def channel_frequency(channel: int, standard='tv') -> float:
         if 14 <= channel <= 69:
             return 473.0 + (channel - 14) * 6
     raise ValueError('Canal de TV fora da tabela de conversão (2–69).')
+
+
+def wavelength_m(frequency_mhz: float, speed_m_s=C_WORKSHEET) -> float:
+    """Free-space wavelength, not the wavelength inside the selected feed line."""
+    finite(frequency_mhz, 'Frequência')
+    if not .1 <= frequency_mhz <= 100_000:
+        raise ValueError('Frequência: use de 0,1 a 100.000 MHz.')
+    if speed_m_s not in (C_WORKSHEET, C_SI):
+        raise ValueError('Selecione c da planilha ou c do SI.')
+    return speed_m_s / (frequency_mhz * 1e6)
 
 
 @dataclass(frozen=True)
@@ -120,7 +131,7 @@ class Result:
 def calculate(design: Design) -> Result:
     design.validate()
     d = design
-    wavelength = d.speed_m_s / (d.frequency_mhz * 1e6)
+    wavelength = wavelength_m(d.frequency_mhz, d.speed_m_s)
     guided = wavelength * d.velocity_factor
     sine = math.sin(math.radians(d.tilt_deg))
     delta = d.velocity_factor * d.spacing_m * sine
@@ -144,7 +155,7 @@ def calculate(design: Design) -> Result:
         relative_loss = (d.attenuation_db_100m or 0) * (actual-min(lengths)) / 100
         amps.append(10 ** (-relative_loss / 20))
         errors.append(math.radians(error))
-    total = sum(row.power_w for row in rows) if common_loss is not None else None
+    total = math.fsum(row.power_w for row in rows) if common_loss is not None else None
     efficiency = total / d.input_power_w if total is not None else None
     equivalent_loss = None
     if common_loss is not None:
@@ -152,7 +163,8 @@ def calculate(design: Design) -> Result:
         relative_transmission = sum(10**(-(row.loss_db-least_loss)/10) for row in rows)/d.elements
         equivalent_loss = least_loss - 10*math.log10(relative_transmission)
     # Coherence at the requested tilt, including amplitude imbalance and cut rounding.
-    numerator = abs(sum(a * complex(math.cos(e), math.sin(e)) for a, e in zip(amps, errors))) ** 2
+    numerator = (math.fsum(a*math.cos(e) for a, e in zip(amps, errors))**2
+                 + math.fsum(a*math.sin(e) for a, e in zip(amps, errors))**2)
     denominator = d.elements * sum(a * a for a in amps)
     coherence = min(1.0, numerator / denominator) if denominator else 0.0
     center = (d.elements - 1) / 2
@@ -184,24 +196,68 @@ def calculate(design: Design) -> Result:
 
 
 def array_pattern(result: Result, angles=None, untilted=False):
-    """Normalized field in dB, floor -60 dB. No assertion of antenna gain."""
+    """Field / sum of amplitudes in dB, floor -60 dB; no viewport renormalization.
+
+    ``untilted`` keeps branch amplitudes and removes their relative phases.
+    """
     if angles is None:
         angles = [-90 + i * 0.1 for i in range(1801)]
+    angles = list(angles)
+    for angle in angles:
+        finite(angle, 'Elevação')
+        if not -90 <= angle <= 90:
+            raise ValueError('Elevação: use de −90° a +90°.')
     d = result.design
     # Only differential losses affect normalized shape; avoid numerical underflow.
     minimum_length = min(e.length_m for e in result.elements)
     weights = [10 ** (-(d.attenuation_db_100m or 0) * (e.length_m-minimum_length) / 2000)
                for e in result.elements]
-    norm = sum(weights)
+    norm = math.fsum(weights)
     values = []
     for angle in angles:
         sine = math.sin(math.radians(angle))
-        real = imag = 0.0
+        real, imag = [], []
         for e, a in zip(result.elements, weights):
             phase = 2*math.pi*e.height_m/result.wavelength_m*sine
             if not untilted:
                 phase += math.radians(e.relative_phase_deg)
-            real += a*math.cos(phase)
-            imag += a*math.sin(phase)
-        values.append(max(-60.0, 20*math.log10(max(math.hypot(real, imag)/norm, 1e-3))))
+            real.append(a*math.cos(phase))
+            imag.append(a*math.sin(phase))
+        ratio = min(1.0, math.hypot(math.fsum(real), math.fsum(imag))/norm)
+        values.append(20*math.log10(max(ratio, 1e-3)))
     return list(angles), values
+
+
+@dataclass(frozen=True)
+class VerticalPatterns:
+    angles: tuple[float, ...]
+    actual_db: tuple[float, ...]
+    ideal_db: tuple[float, ...]
+    untilted_db: tuple[float, ...]
+    sampling_limited: bool
+
+
+def vertical_patterns(result: Result, start=-90.0, stop=90.0) -> VerticalPatterns:
+    """Viewport sampling with 32 samples per fastest spatial phase cycle.
+
+    The bounded grid avoids UI stalls for extreme apertures; a limit flag must
+    remain visible whenever the required density exceeds this bound.
+    """
+    for value in (start, stop):
+        finite(value, 'Limite do eixo X')
+    if not -90 <= start < stop <= 90:
+        raise ValueError('Eixo X: informe início menor que fim, entre −90° e +90°.')
+    aperture = result.elements[-1].height_m / result.wavelength_m
+    needed = max(1801, math.ceil(math.radians(stop-start)*aperture*32)+1)
+    count = min(needed, 12001)
+    angles = [start+(stop-start)*i/(count-1) for i in range(count)]
+    # Always evaluate requested and fitted directions, even between grid points.
+    for tilt in (result.design.tilt_deg, result.fitted_tilt_deg):
+        if tilt is not None and start <= -tilt <= stop:
+            angles.append(-tilt)
+    angles = sorted(set(angles))
+    from dataclasses import replace
+    ideal = calculate(replace(result.design, cut_step_mm=0))
+    return VerticalPatterns(tuple(angles), tuple(array_pattern(result, angles)[1]),
+                            tuple(array_pattern(ideal, angles)[1]),
+                            tuple(array_pattern(result, angles, untilted=True)[1]), needed > count)

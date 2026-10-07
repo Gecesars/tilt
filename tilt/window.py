@@ -3,20 +3,18 @@ from datetime import datetime
 from pathlib import Path
 import sqlite3
 
-from PySide6.QtCore import Qt, QSize, QUrl
-from PySide6.QtGui import QIcon, QPixmap, QTextDocument, QDesktopServices, QAction, QKeySequence
-from PySide6.QtPrintSupport import QPrinter
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon, QPixmap, QAction, QKeySequence
 from PySide6.QtWidgets import (
-    QAbstractItemView, QApplication, QCheckBox, QComboBox, QDialog, QFileDialog,
-    QFormLayout, QFrame, QGridLayout, QGroupBox, QHBoxLayout, QHeaderView, QLabel,
-    QLineEdit, QMainWindow, QMenu, QMessageBox, QPushButton, QScrollArea, QSizePolicy,
-    QSpinBox, QSplitter, QTableWidget, QTableWidgetItem, QTabWidget, QTextBrowser,
+    QAbstractItemView, QFileDialog, QFormLayout, QFrame, QGroupBox, QHBoxLayout, QHeaderView, QLabel,
+    QLineEdit, QMainWindow, QMenu, QMessageBox, QPushButton, QSizePolicy,
+    QTableWidget, QTableWidgetItem, QTabWidget, QTextBrowser,
     QVBoxLayout, QWidget,
 )
 
-from .engineering import C_SI, C_WORKSHEET, Design, array_pattern, calculate, channel_frequency, parse_decimal
+from .engineering import C_WORKSHEET, Design, calculate, channel_frequency, parse_decimal, wavelength_m
 from .reports import export_csv, export_json, fmt, report_html, snapshot
-from .visuals import ArrayIllustration, LengthIllustration, SeriesChart, BLUE, TEAL
+from .visuals import BLUE, TEAL
 from .theme import STYLE, apply_palette
 from . import __version__
 
@@ -79,12 +77,16 @@ class MainWindow(QMainWindow):
         self.pages.setDocumentMode(True)
         layout.addWidget(self.pages, 1)
         self._workbench()
+        from .diagrams import DiagramPage
+        self.diagrams = DiagramPage()
+        self.pages.addTab(self.diagrams, 'Diagramas')
         self._catalog_page()
         self._projects_page()
         self._method_page()
         self.statusBar().showMessage('Catálogo ADT-PY · 47 modelos · dados locais em SQLite')
         self.loading = False
         self.rebuild_models()
+        self.update_spacing()
         self.run_calculation()
         self.state.setText('Exemplo inicial · substitua os dados pelos da sua instalação e clique em Calcular comprimentos.')
         self.refresh_projects()
@@ -96,6 +98,10 @@ class MainWindow(QMainWindow):
         save_action.setShortcut(QKeySequence.StandardKey.Save)
         save_action.triggered.connect(self.save_project)
         self.addAction(save_action)
+        print_action = QAction('Imprimir', self)
+        print_action.setShortcut(QKeySequence.StandardKey.Print)
+        print_action.triggered.connect(self.prepare_print)
+        self.addAction(print_action)
 
     def _header(self):
         frame = QFrame()
@@ -123,6 +129,9 @@ class MainWindow(QMainWindow):
         self.export_button = QPushButton('Exportar…')
         self.export_button.clicked.connect(self.export)
         row.addWidget(self.export_button)
+        self.print_button = QPushButton('Imprimir…')
+        self.print_button.clicked.connect(self.prepare_print)
+        row.addWidget(self.print_button)
         return frame
 
     def _field(self, form, key, title, value, unit='', hint=''):
@@ -180,7 +189,7 @@ class MainWindow(QMainWindow):
         self.result_tabs.tabBar().setVisible(checked)
         if not checked:
             self.result_tabs.setCurrentIndex(0)
-        self.result_detail_stack.setCurrentIndex(1 if checked else 0)
+        self.result_detail_stack.setCurrentIndex(0)
         self.array.simple = not checked
         self.array.setMinimumWidth(375 if checked else 260)
         self.array.setMinimumHeight(420 if checked else 340)
@@ -282,6 +291,15 @@ class MainWindow(QMainWindow):
         <li>Informe a quantidade de antenas, a distância entre seus centros, a inclinação desejada e o trecho mais curto.</li></ol>
         <p>Clique em <b>Calcular comprimentos</b>. A tabela mostra o comprimento para cada antena;
         E1 é a mais baixa. Salve o cálculo ou exporte o resultado para PDF, CSV ou JSON.</p>
+        <p><b>Espaçamento automático:</b> a frequência preenche a distância com 1 λ no espaço livre (c/f).
+        Editar a distância muda para manual; marque a opção novamente para acompanhar a frequência.
+        Um espaçamento de 1 λ não garante ausência de outras direções de máximo.</p>
+        <p><b>Diagramas:</b> ajuste início e fim do eixo horizontal entre −90° e +90°.
+        Este eixo é elevação, com zero no horizonte e valores negativos para baixo.
+        Mudar a faixa não altera os comprimentos.</p>
+        <p><b>Imprimir (Ctrl+P):</b> salva um PDF em Documentos/EFTX Tilt/Relatorios e abre a prévia,
+        com a impressora padrão selecionada. No diálogo de impressão você pode escolher outra impressora,
+        páginas e cópias. Cancelar mantém o PDF e não envia o trabalho.</p>
         <p>Vírgula e ponto são aceitos para decimais. Valores iniciais são apenas um exemplo.
         Os ajustes avançados permitem informar perdas e medidas técnicas. Recolhê-los mantém os valores.
         A energia estimada depende das perdas informadas e não representa o rendimento total da antena.</p>
@@ -334,12 +352,36 @@ class MainWindow(QMainWindow):
         self.state.setText('Entradas alteradas · calcule novamente para atualizar e exportar.')
         self.save_button.setEnabled(False)
         self.export_button.setEnabled(False)
+        self.print_button.setEnabled(False)
+        self.diagrams.invalidate()
         self.result_tabs.setEnabled(False)
         self.answer.setText('Clique em Calcular comprimentos para ver a orientação com os novos dados.')
         for value in self.metrics.values():
             value.setText('—')
         self.warnings.hide()
         self.secondary.setText('Resultados anteriores desativados até novo cálculo.')
+
+    def update_spacing(self, *_):
+        if self.loading:
+            return
+        try:
+            frequency = parse_decimal(self.fields['frequency_mhz'].text(), 'Frequência')
+            length = wavelength_m(frequency, self.speed.currentData())*1000
+        except ValueError:
+            self.lambda_info.setText('Informe uma frequência válida para calcular λ.')
+            return
+        self.lambda_info.setText(f'1 λ no espaço livre = {fmt(length, 3)} mm')
+        if self.auto_spacing.isChecked():
+            self._setting_spacing = True
+            try:
+                self.fields['spacing_mm'].setText(f'{length:.9f}'.rstrip('0').rstrip('.').replace('.', ','))
+            finally:
+                self._setting_spacing = False
+        self.invalidate()
+
+    def spacing_edited(self):
+        if not self.loading and not getattr(self, '_setting_spacing', False):
+            self.auto_spacing.setChecked(False)
 
     def frequency_changed(self, *_):
         derived = self.frequency_mode.currentIndex() == 1
@@ -425,7 +467,7 @@ class MainWindow(QMainWindow):
         return dict(schema_version=1, design=asdict(design), kind=self.kind.currentData(),
                     model=self.model.currentText(), override_vf=self.override_vf.isChecked(),
                     frequency_mode=self.frequency_mode.currentIndex(), channel=self.channel.value(),
-                    ofdm_offset=self.ofdm_offset.isChecked())
+                    ofdm_offset=self.ofdm_offset.isChecked(), spacing_auto=self.auto_spacing.isChecked())
 
     def run_calculation(self):
         try:
@@ -465,6 +507,7 @@ class MainWindow(QMainWindow):
             self.metrics[key].setText(fmt(value, digits))
         self.save_button.setEnabled(True)
         self.export_button.setEnabled(True)
+        self.print_button.setEnabled(True)
         self.result_tabs.setEnabled(True)
         self.array.set_result(r, self.kind.currentData())
         self.lengths.set_result(r, self.kind.currentData())
@@ -477,11 +520,6 @@ class MainWindow(QMainWindow):
         self.length_title.setText('Comprimento de cada cabo' if self.kind.currentData() == 'cable' else 'Comprimento de cada linha')
         fill_table(self.simple_table, [[f'E{e.number}', 'Inferior' if e.number == 1 else 'Superior' if e.number == d.elements else 'Intermediária',
                                       fmt(e.length_m*1000, 3)] for e in r.elements])
-        angles, pattern = array_pattern(r)
-        _, zero = array_pattern(r, untilted=True)
-        self.pattern.set_data([('Com tilt', angles, pattern, BLUE), ('Sem tilt', angles, zero, '#96b3ca')],
-                              'Elevação (°) · negativo = abaixo do horizonte', 'Campo normalizado (dB)',
-                              (-90, 90), (-40, 0), -d.tilt_deg)
         fill_table(self.element_table, [[f'E{e.number}', fmt(e.height_m), fmt(e.ideal_length_m*1000),
                     fmt(e.length_m*1000), fmt(e.relative_phase_deg), fmt(e.phase_error_deg),
                     fmt(e.loss_db), fmt(e.power_w)] for e in r.elements])
@@ -513,15 +551,17 @@ class MainWindow(QMainWindow):
             warnings.append('Canal histórico ou de destinação específica. A conversão não verifica autorização de uso.')
         r = replace(r, warnings=tuple(warnings))
         self.result = r
+        self.diagrams.set_result(r)
         self.report_preview.setHtml(report_html(r, self.model.currentText(), self.project_name.text()))
         self.secondary.setText(f'λ₀ {fmt(r.wavelength_m*1000)} mm  ·  λg {fmt(r.guided_wavelength_m*1000)} mm  ·  '
                                f'Coerência no alvo {fmt(r.coherence_efficiency*100, 3)}%  ·  '
                                f'Tilt da progressão após corte {fmt(r.fitted_tilt_deg, 4)}°  ·  Perda {fmt(r.equivalent_loss_db)} dB')
         self.update_warnings()
-        self.statusBar().showMessage('Cálculo concluído · Ctrl+S para salvar · gráficos e fórmulas em Detalhes técnicos')
+        self.statusBar().showMessage('Cálculo concluído · Ctrl+S para salvar · Ctrl+P para imprimir · veja a aba Diagramas')
 
     def load_example(self, kind):
         self.loading = True
+        self.auto_spacing.setChecked(False)
         self.frequency_mode.setCurrentIndex(0)
         self.kind.setCurrentIndex(0 if kind == 'cable' else 1)
         self.model.setCurrentText(CUSTOM)
@@ -539,6 +579,7 @@ class MainWindow(QMainWindow):
         self.speed.setCurrentIndex(0)
         self.project_name.setText('Referência da planilha — ' + ('cabo' if kind == 'cable' else 'linha rígida'))
         self.loading = False
+        self.update_spacing()
         self.update_line_properties()
         self.pages.setCurrentIndex(0)
         self.run_calculation()
@@ -612,6 +653,7 @@ class MainWindow(QMainWindow):
             self.db.cable(payload['model'])
         self.loading = True
         try:
+            self.auto_spacing.setChecked(bool(payload.get('spacing_auto', False)))
             self.kind.setCurrentIndex(0 if payload['kind'] == 'cable' else 1)
             self.model.setCurrentText(payload['model'])
             self.override_vf.setChecked(payload['override_vf'])
@@ -628,6 +670,7 @@ class MainWindow(QMainWindow):
             self.project_name.setText(title)
         finally:
             self.loading = False
+        self.update_spacing()
         # Catalog changes are intentionally applied only on an explicit calculation.
         self.invalidate()
         self.update_advanced_summary()
@@ -661,40 +704,28 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(f'Exportado: {path.name}')
 
     def write_pdf(self, path):
-        printer = QPrinter(QPrinter.PrinterMode.HighResolution)
-        printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
-        printer.setOutputFileName(str(path))
-        printer.setDocName(self.project_name.text())
-        printer.setCreator(f'EFTX Tilt {__version__}')
-        from PySide6.QtGui import QPageLayout, QPageSize
-        from PySide6.QtCore import QMarginsF
-        printer.setPageSize(QPageSize(QPageSize.PageSizeId.A4))
-        printer.setPageMargins(QMarginsF(15, 14, 15, 14), QPageLayout.Unit.Millimeter)
-        doc = QTextDocument()
-        logo_url = QUrl('eftx-logo')
-        doc.addResource(QTextDocument.ResourceType.ImageResource, logo_url, QPixmap(str(ASSETS / 'eftx_logo.jpeg')))
-        html = report_html(self.result, self.model.currentText(), self.project_name.text())
-        html = html.replace('<body>', '<body><img src="eftx-logo" width="150" height="99">')
-        # Fixed report geometry: resizing the application must not clip exported figures.
-        report_array = ArrayIllustration()
-        report_array.resize(640, 500)
-        report_array.set_result(self.result, self.kind.currentData())
-        report_chart = SeriesChart('Fator de arranjo vertical', 'Elementos isotrópicos · campo normalizado')
-        report_chart.resize(640, 480)
-        angles, values = array_pattern(self.result)
-        _, zero = array_pattern(self.result, untilted=True)
-        report_chart.set_data([('Com tilt', angles, values, BLUE), ('Sem tilt', angles, zero, '#96b3ca')],
-                             'Elevação (°) · negativo = abaixo do horizonte', 'Campo normalizado (dB)',
-                             (-90, 90), (-40, 0), -self.result.design.tilt_deg)
-        for name, widget in [('arranjo', report_array), ('diagrama', report_chart)]:
-            doc.addResource(QTextDocument.ResourceType.ImageResource, QUrl(name), widget.grab())
-        html = html.replace('<h2>Comprimentos entre planos de referência</h2>',
-                            '<h2 style="page-break-before:always">Comprimentos entre planos de referência</h2>')
-        html = html.replace('</body>', '<div style="page-break-before:always"><h2>Ilustrações do cálculo</h2>'
-            '<p>Esquema sem escala. Fator de arranjo de elementos isotrópicos.</p>'
-            '<p><img src="arranjo" width="550"></p><p><img src="diagrama" width="550"></p></div>'
-            f'<p>Catálogo SHA-256: {self.db.catalog_hash}</p></body>')
-        doc.setHtml(html)
-        doc.print_(printer)
-        if not Path(path).exists() or Path(path).stat().st_size < 100:
-            raise OSError('PDF não gravado.')
+        from .printing import write_report_pdf
+        return write_report_pdf(path, self.result, self.model.currentText(), self.project_name.text(),
+                                self.kind.currentData(), self.db.catalog_hash, self.calculated_payload,
+                                self.diagrams.view_range)
+
+    def prepare_print(self):
+        if self.result is None:
+            self.statusBar().showMessage('Calcule os comprimentos antes de imprimir.')
+            return False
+        from PySide6.QtCore import QStandardPaths
+        from .printing import PrintPreview
+        folder = Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DocumentsLocation)) / 'EFTX Tilt' / 'Relatorios'
+        try:
+            folder.mkdir(parents=True, exist_ok=True)
+            path = folder / ('Tilt_' + datetime.now().strftime('%Y%m%d_%H%M%S_%f') + '.pdf')
+            self.write_pdf(path)
+            preview = PrintPreview(path, self)
+        except (OSError, ValueError):
+            QMessageBox.warning(self, 'Impressão não preparada',
+                                'Não foi possível gerar ou abrir o PDF. Verifique a pasta Documentos e as permissões de escrita.')
+            return False
+        self.statusBar().showMessage(f'PDF salvo: {path}')
+        preview.exec()
+        preview.deleteLater()
+        return True

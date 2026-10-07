@@ -4,6 +4,7 @@ import math
 import pytest
 
 from tilt.engineering import C_SI, Design, array_pattern, calculate, channel_frequency, parse_decimal
+from tilt.engineering import wavelength_m, vertical_patterns
 
 
 def test_cable_workbook_golden():
@@ -120,3 +121,56 @@ def test_channel_boundaries(channel, frequency):
 def test_invalid_channels(channel):
     with pytest.raises(ValueError):
         channel_frequency(channel)
+
+
+def test_wavelength_is_not_scaled_by_cable_velocity_factor():
+    assert wavelength_m(600) == .5
+    assert wavelength_m(600, C_SI) == pytest.approx(.4996540966666667)
+    result = calculate(Design(frequency_mhz=600, spacing_m=wavelength_m(600), velocity_factor=.66))
+    assert result.guided_wavelength_m == .33
+    assert result.design.spacing_m == .5
+
+
+@pytest.mark.parametrize('frequency', [0, -1, float('nan'), float('inf'), True])
+def test_wavelength_rejects_invalid_frequency(frequency):
+    with pytest.raises(ValueError):
+        wavelength_m(frequency)
+
+
+def test_pattern_matches_closed_form_uniform_array_and_accepts_generators():
+    d = Design(frequency_mhz=600, spacing_m=.25, elements=8, tilt_deg=5, cut_step_mm=0, attenuation_db_100m=0)
+    r = calculate(d)
+    angles = [-30., -12.4, -5., 0., 8.1, 23.7]
+    actual_angles, actual = array_pattern(r, iter(angles))
+    assert actual_angles == angles
+    for angle, field_db in zip(angles, actual):
+        psi = 2*math.pi*d.spacing_m/.5*(math.sin(math.radians(angle))+math.sin(math.radians(d.tilt_deg)))
+        ratio = abs(math.sin(d.elements*psi/2)/(d.elements*math.sin(psi/2))) if abs(psi) > 1e-12 else 1
+        expected = 20*math.log10(max(ratio, .001))
+        assert field_db == pytest.approx(expected, abs=1e-10)
+
+
+def test_viewport_sampling_preserves_reference_and_cut_effects():
+    r = calculate(Design(frequency_mhz=600, spacing_m=.25, elements=8, tilt_deg=2.1234, cut_step_mm=20))
+    narrow = vertical_patterns(r, -3, 3)
+    assert -r.design.tilt_deg in narrow.angles
+    assert min(narrow.angles) == -3
+    assert max(narrow.angles) == 3
+    assert list(narrow.actual_db) == array_pattern(r, narrow.angles)[1]
+    assert max(abs(a-b) for a,b in zip(narrow.actual_db, narrow.ideal_db)) > .01
+    assert all(-60 <= value <= 0 for value in narrow.actual_db)
+
+
+def test_extreme_aperture_sampling_is_bounded_and_disclosed():
+    r = calculate(Design(frequency_mhz=1000, spacing_m=100, elements=2))
+    full = vertical_patterns(r)
+    assert full.sampling_limited
+    assert len(full.angles) <= 12003
+    focused = vertical_patterns(r, -2.01, -1.99)
+    assert not focused.sampling_limited
+
+
+@pytest.mark.parametrize('start,stop', [(1,1),(1,-1),(-91,0),(0,91),(float('nan'),1)])
+def test_invalid_plot_range_is_rejected(start, stop):
+    with pytest.raises(ValueError):
+        vertical_patterns(calculate(Design()), start, stop)

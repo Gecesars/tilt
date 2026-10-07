@@ -38,6 +38,7 @@ class SeriesChart(QWidget):
         super().__init__(parent)
         self.title, self.subtitle = title, subtitle
         self.series = []
+        self.dashed_series = set()
         self.x_bounds = None
         self.y_bounds = None
         self.x_label, self.y_label = '', ''
@@ -98,7 +99,7 @@ class SeriesChart(QWidget):
              align=Qt.AlignmentFlag.AlignCenter)
         p.save()
         p.setClipRect(box.adjusted(-1, -1, 1, 1))
-        for label, sx, sy, color in self.series:
+        for label, sx, sy, color in reversed(self.series):
             path = QPainterPath()
             for i, (x, y) in enumerate(zip(sx, sy)):
                 q = point(x, y)
@@ -106,7 +107,10 @@ class SeriesChart(QWidget):
                     path.moveTo(q)
                 else:
                     path.lineTo(q)
-            p.setPen(QPen(QColor(color), 2))
+            pen = QPen(QColor(color), 2)
+            if label in self.dashed_series:
+                pen.setStyle(Qt.PenStyle.DashLine)
+            p.setPen(pen)
             p.drawPath(path)
         if self.marker_x is not None and xmin <= self.marker_x <= xmax:
             x = point(self.marker_x, ymin).x()
@@ -114,7 +118,7 @@ class SeriesChart(QWidget):
         p.restore()
         offset = 22
         for label, _, _, color in self.series:
-            line(p, offset, h-48, offset+17, h-48, color, 3)
+            line(p, offset, h-48, offset+17, h-48, color, 3, label in self.dashed_series)
             text(p, offset+23, h-59, 170, 22, label, 8, MUTED)
             offset += 170
         if self.hover is not None and box.contains(self.hover):
