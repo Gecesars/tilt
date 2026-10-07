@@ -9,7 +9,7 @@ from PySide6.QtPrintSupport import QPrinter
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication, QCheckBox, QComboBox, QDialog, QFileDialog,
     QFormLayout, QFrame, QGridLayout, QGroupBox, QHBoxLayout, QHeaderView, QLabel,
-    QLineEdit, QMainWindow, QMessageBox, QPushButton, QScrollArea, QSizePolicy,
+    QLineEdit, QMainWindow, QMenu, QMessageBox, QPushButton, QScrollArea, QSizePolicy,
     QSpinBox, QSplitter, QTableWidget, QTableWidgetItem, QTabWidget, QTextBrowser,
     QVBoxLayout, QWidget,
 )
@@ -17,48 +17,11 @@ from PySide6.QtWidgets import (
 from .engineering import C_SI, C_WORKSHEET, Design, array_pattern, calculate, channel_frequency, parse_decimal
 from .reports import export_csv, export_json, fmt, report_html, snapshot
 from .visuals import ArrayIllustration, LengthIllustration, SeriesChart, BLUE, TEAL
+from .theme import STYLE, apply_palette
+from . import __version__
 
 ASSETS = Path(__file__).parent / 'assets'
 CUSTOM = 'Personalizado / referência da planilha'
-
-STYLE = '''
-QMainWindow, QDialog {background:#edf2f8;}
-QWidget {font-family:"Segoe UI";font-size:10pt;color:#172d48;}
-QFrame#Header {background:white;border-bottom:1px solid #d4deeb;}
-QLabel#AppTitle {font-size:23pt;font-weight:650;color:#092c74;}
-QLabel#Subtitle {color:#64768c;font-size:10pt;}
-QLabel#State {background:#e9effa;color:#24419b;border-radius:5px;padding:8px;font-weight:600;}
-QLabel#Error {background:#fff0ef;color:#a02d22;border:1px solid #f0c5be;padding:10px;border-radius:5px;}
-QLabel#Notice {background:#fff7e8;color:#895716;border:1px solid #eed7ac;padding:9px;border-radius:5px;}
-QGroupBox {background:white;border:1px solid #d6e0ec;border-radius:7px;margin-top:13px;padding:14px 10px 9px 10px;font-weight:600;}
-QGroupBox::title {subcontrol-origin:margin;left:12px;padding:0 4px;color:#264a83;}
-QLineEdit,QComboBox,QSpinBox {background:white;border:1px solid #c5d2e1;border-radius:5px;min-height:29px;padding:2px 8px;selection-background-color:#2946c7;}
-QLineEdit:focus,QComboBox:focus,QSpinBox:focus {border:1px solid #2946c7;}
-QLineEdit[invalid="true"] {border:2px solid #ca4434;background:#fff5f3;}
-QLineEdit:disabled,QComboBox:disabled {background:#f0f4f8;color:#64768c;}
-QPushButton {background:white;border:1px solid #bdccdc;border-radius:5px;padding:8px 13px;font-weight:600;min-height:19px;}
-QPushButton:hover {background:#eaf0ff;border-color:#2946c7;}
-QPushButton:pressed {background:#dce5ff;}
-QPushButton:disabled {color:#93a0b0;background:#f0f3f7;border-color:#dce3ec;}
-QPushButton#Primary {background:#143b9b;color:white;border:1px solid #143b9b;}
-QPushButton#Primary:hover {background:#254eb5;}
-QPushButton#Primary:disabled {background:#a8b6d4;border-color:#a8b6d4;}
-QTabWidget::pane {border:1px solid #d6e0ec;background:white;border-radius:4px;}
-QTabBar::tab {padding:11px 17px;background:#eaf0f7;color:#62748a;border-bottom:2px solid transparent;}
-QTabBar::tab:selected {background:white;color:#123d96;border-bottom:2px solid #c5202c;font-weight:600;}
-QTableWidget {background:white;alternate-background-color:#f5f8fc;gridline-color:#e5ebf2;border:0;selection-background-color:#d9e6ff;selection-color:#173b75;}
-QHeaderView::section {background:#eaf0f8;color:#24456f;border:0;border-bottom:1px solid #cbd8e9;padding:9px;font-weight:600;}
-QFrame#Metric {background:white;border:1px solid #d6e0ec;border-radius:6px;}
-QLabel#MetricValue {color:#0b3386;font-size:21pt;font-weight:650;}
-QLabel#MetricName {color:#64768c;font-size:9pt;}
-QScrollArea {border:0;background:transparent;}
-QScrollBar:vertical {background:#edf2f8;width:10px;}
-QScrollBar::handle:vertical {background:#b8c7da;border-radius:4px;min-height:30px;}
-QTextBrowser {border:0;background:white;padding:14px;}
-QStatusBar {background:#142d50;color:white;}
-QStatusBar QLabel {color:white;}
-'''
-
 
 def label(value, name=None, wrap=False):
     item = QLabel(value)
@@ -100,10 +63,11 @@ class MainWindow(QMainWindow):
         self.loading = True
         self.fields = {}
         self.field_labels = {}
-        self.setWindowTitle('EFTX ANTENNAS · Tilt elétrico')
+        self.setWindowTitle(f'EFTX ANTENNAS · Tilt elétrico · {__version__}')
         self.setWindowIcon(QIcon(str(ASSETS / 'eftx_logo.jpeg')))
-        self.resize(1540, 1000)
+        self.resize(1440, 940)
         self.setMinimumSize(1100, 760)
+        apply_palette()
         self.setStyleSheet(STYLE)
         root = QWidget()
         layout = QVBoxLayout(root)
@@ -122,6 +86,7 @@ class MainWindow(QMainWindow):
         self.loading = False
         self.rebuild_models()
         self.run_calculation()
+        self.state.setText('Exemplo inicial · substitua os dados pelos da sua instalação e clique em Calcular comprimentos.')
         self.refresh_projects()
         action = QAction('Calcular', self)
         action.setShortcut(QKeySequence('Ctrl+Return'))
@@ -138,22 +103,21 @@ class MainWindow(QMainWindow):
         row = QHBoxLayout(frame)
         row.setContentsMargins(18, 4, 22, 4)
         logo = QLabel()
-        logo.setPixmap(QPixmap(str(ASSETS / 'eftx_logo.jpeg')).scaled(180, 114, Qt.AspectRatioMode.KeepAspectRatio,
+        logo.setPixmap(QPixmap(str(ASSETS / 'eftx_logo.jpeg')).scaled(130, 82, Qt.AspectRatioMode.KeepAspectRatio,
                                                                  Qt.TransformationMode.SmoothTransformation))
-        logo.setFixedSize(184, 114)
+        logo.setFixedSize(134, 82)
         logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         row.addWidget(logo)
         titles = QVBoxLayout()
         titles.setSpacing(2)
         titles.addWidget(label('Tilt elétrico', 'AppTitle'))
-        titles.addWidget(label('Dimensionamento entre elementos · cabos coaxiais e linhas rígidas', 'Subtitle'))
         self.project_name = QLineEdit('Arranjo vertical — estudo de tilt')
         self.project_name.setMaxLength(160)
         self.project_name.setToolTip('Nome da revisão salva no banco local')
         titles.addWidget(self.project_name)
         row.addLayout(titles, 1)
         row.addSpacing(20)
-        self.save_button = QPushButton('Salvar revisão')
+        self.save_button = QPushButton('Salvar cálculo')
         self.save_button.clicked.connect(self.save_project)
         row.addWidget(self.save_button)
         self.export_button = QPushButton('Exportar…')
@@ -186,169 +150,84 @@ class MainWindow(QMainWindow):
         group = QGroupBox(title)
         form = QFormLayout(group)
         form.setHorizontalSpacing(9)
-        form.setVerticalSpacing(7)
+        form.setVerticalSpacing(5)
         form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
         layout.addWidget(group)
         return form
 
     def _workbench(self):
-        page = QWidget()
-        outer = QHBoxLayout(page)
-        outer.setContentsMargins(12, 12, 12, 12)
-        splitter = QSplitter()
-        outer.addWidget(splitter)
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        left = QWidget()
-        left.setMinimumWidth(330)
-        left.setMaximumWidth(450)
-        left_layout = QVBoxLayout(left)
-        left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.addWidget(scroll, 1)
-        controls = QWidget()
-        inputs = QVBoxLayout(controls)
-        inputs.setContentsMargins(0, 0, 8, 0)
-        inputs.setSpacing(9)
-        scroll.setWidget(controls)
-        splitter.addWidget(left)
-        form = self._group('01   Frequência de operação', inputs)
-        self.frequency_mode = QComboBox()
-        self.frequency_mode.addItems(['Frequência informada', 'Canal de TV (centro de 6 MHz)'])
-        self.frequency_mode.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
-        form.addRow('Entrada', self.frequency_mode)
-        self.channel = QSpinBox()
-        self.channel.setRange(2, 69)
-        self.channel.setValue(39)
-        self.channel.setEnabled(False)
-        form.addRow('Canal', self.channel)
-        self._field(form, 'frequency_mhz', 'Frequência', 623, 'MHz')
-        self.ofdm_offset = QCheckBox('Aplicar deslocamento +1/7 MHz')
-        self.ofdm_offset.setEnabled(False)
-        form.addRow(self.ofdm_offset)
-        self.frequency_mode.currentIndexChanged.connect(self.frequency_changed)
-        self.channel.valueChanged.connect(self.frequency_changed)
-        self.ofdm_offset.toggled.connect(self.frequency_changed)
-        self.fields['frequency_mhz'].textChanged.connect(self.update_line_properties)
-        form = self._group('02   Linha de alimentação', inputs)
-        self.kind = QComboBox()
-        self.kind.addItem('Cabo coaxial', 'cable')
-        self.kind.addItem('Linha rígida', 'rigid')
-        form.addRow('Construção', self.kind)
-        self.model = QComboBox()
-        self.model.setEditable(True)
-        self.model.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
-        self.model.completer().setFilterMode(Qt.MatchFlag.MatchContains)
-        self.model.completer().setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
-        self.model.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
-        self.model.setMinimumContentsLength(15)
-        form.addRow('Modelo', self.model)
-        self.override_vf = QCheckBox('Usar VF medido / informado')
-        form.addRow(self.override_vf)
-        self._field(form, 'velocity_factor', 'Fator de velocidade', 0.88, 'v/c')
-        self._field(form, 'attenuation_db_100m', 'Atenuação', '', 'dB/100 m', 'Deixe vazio no modo personalizado se a atenuação for desconhecida.')
-        self.line_info = label('', 'Subtitle', True)
-        form.addRow(self.line_info)
-        self.kind.currentIndexChanged.connect(self.rebuild_models)
-        self.model.currentTextChanged.connect(self.update_line_properties)
-        self.override_vf.toggled.connect(self.update_line_properties)
-        form = self._group('03   Arranjo vertical', inputs)
-        self.elements = QSpinBox()
-        self.elements.setRange(2, 64)
-        self.elements.setValue(4)
-        self.elements.valueChanged.connect(self.invalidate)
-        form.addRow('Elementos', self.elements)
-        self._field(form, 'spacing_mm', 'Espaçamento', 480, 'mm', 'Distância entre centros de fase de elementos adjacentes.')
-        self._field(form, 'tilt_deg', 'Tilt desejado', 2, '°')
-        form.addRow(label('Positivo: para baixo · negativo: para cima', 'Subtitle'))
-        self._field(form, 'shortest_branch_m', 'Ramal mais curto', 3, 'm', 'Comprimento entre planos de referência. Verifique o percurso físico de todos os ramais.')
-        self._field(form, 'cut_step_mm', 'Passo de corte', 0.1, 'mm', '0 = comprimento ideal; valor positivo = arredondamento ao passo de fabricação.')
-        form = self._group('04   Perdas e potência', inputs)
-        self._field(form, 'common_feeder_m', 'Linha comum', 0, 'm', 'Mesmo modelo do ramal, antes do divisor.')
-        self._field(form, 'extra_loss_db', 'Perdas adicionais', 0, 'dB', 'Perda total adicional por caminho: conectores e perda de inserção do divisor, excluindo a divisão ideal 1/N.')
-        self._field(form, 'input_power_w', 'Potência de entrada', 1000, 'W')
-        self.speed = QComboBox()
-        self.speed.addItem('Planilhas · c = 300.000.000 m/s', C_WORKSHEET)
-        self.speed.addItem('SI · c = 299.792.458 m/s', C_SI)
-        self.speed.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
-        self.speed.currentIndexChanged.connect(self.invalidate)
-        form.addRow('Constante c', self.speed)
-        self.error = label('', 'Error', True)
-        self.error.hide()
-        left_layout.addWidget(self.error)
-        self.calculate_button = QPushButton('Calcular arranjo   Ctrl+Enter')
-        self.calculate_button.setObjectName('Primary')
-        self.calculate_button.clicked.connect(self.run_calculation)
-        left_layout.addWidget(self.calculate_button)
-        examples = QHBoxLayout()
-        for title, mode in [('Exemplo: cabo', 'cable'), ('Exemplo: rígida', 'rigid')]:
-            button = QPushButton(title)
-            button.clicked.connect(lambda checked=False, m=mode: self.load_example(m))
-            examples.addWidget(button)
-        left_layout.addLayout(examples)
-        inputs.addStretch()
-        right = QWidget()
-        content = QVBoxLayout(right)
-        content.setContentsMargins(7, 0, 0, 0)
-        content.setSpacing(10)
-        self.state = label('Informe as entradas e calcule.', 'State')
-        content.addWidget(self.state)
-        metrics = QGridLayout()
-        self.metrics = {}
-        for i, (key, name, unit) in enumerate([
-            ('delta', 'Diferença de comprimento / nível', 'mm'), ('phase', 'Avanço de fase / nível', 'graus'),
-            ('efficiency', 'Eficiência de alimentação', '%'), ('power', 'Potência entregue ao arranjo', 'W')]):
-            card = QFrame()
-            card.setObjectName('Metric')
-            column = QVBoxLayout(card)
-            column.setContentsMargins(14, 11, 14, 11)
-            column.addWidget(label(name, 'MetricName', True))
-            value = label('—', 'MetricValue')
-            column.addWidget(value)
-            column.addWidget(label(unit, 'Subtitle'))
-            metrics.addWidget(card, 0, i)
-            self.metrics[key] = value
-        content.addLayout(metrics)
-        self.result_tabs = QTabWidget()
-        visuals = QSplitter()
-        self.array = ArrayIllustration()
-        self.pattern = SeriesChart('Fator de arranjo vertical', 'Elementos isotrópicos · campo normalizado')
-        visuals.addWidget(self.array)
-        visuals.addWidget(self.pattern)
-        visuals.setSizes([480, 470])
-        self.result_tabs.addTab(visuals, 'Arranjo e diagrama')
-        cut_page = QWidget()
-        cut_layout = QVBoxLayout(cut_page)
-        self.lengths = LengthIllustration()
-        self.lengths.setMaximumHeight(280)
-        cut_layout.addWidget(self.lengths)
-        self.element_table = table(['Elemento', 'z (m)', 'Ideal (mm)', 'Corte (mm)', 'Fase (°)', 'Erro (°)', 'Perda (dB)', 'Potência (W)'])
-        cut_layout.addWidget(self.element_table, 1)
-        self.result_tabs.addTab(cut_page, 'Comprimentos por elemento')
-        losses_page = QSplitter(Qt.Orientation.Vertical)
-        self.attenuation_chart = SeriesChart('Atenuação da linha', 'Pontos do catálogo e interpolação log-log')
-        self.power_chart = SeriesChart('Distribuição de potência', 'Divisão ideal igual; perdas por caminho')
-        losses_page.addWidget(self.attenuation_chart)
-        losses_page.addWidget(self.power_chart)
-        losses_scroll = QScrollArea()
-        losses_scroll.setWidgetResizable(True)
-        losses_scroll.setWidget(losses_page)
-        self.result_tabs.addTab(losses_scroll, 'Perdas e potência')
-        self.report_preview = QTextBrowser()
-        self.result_tabs.addTab(self.report_preview, 'Memória do cálculo')
-        content.addWidget(self.result_tabs, 1)
-        self.secondary = label('', 'Subtitle', True)
-        content.addWidget(self.secondary)
-        self.warnings = label('', 'Notice', True)
-        content.insertWidget(2, self.warnings)
-        self.limits = label('Modelo: alimentação paralela com divisão igual. Eficiência da alimentação exclui radiação, ROE e acoplamento. Comprimentos entre planos de referência.', 'Subtitle', True)
-        content.addWidget(self.limits)
-        result_scroll = QScrollArea()
-        result_scroll.setWidgetResizable(True)
-        result_scroll.setWidget(right)
-        splitter.addWidget(result_scroll)
-        splitter.setStretchFactor(1, 1)
-        splitter.setSizes([375, 1100])
-        self.pages.addTab(page, 'Bancada de cálculo')
+        from .workbench import build_workbench
+        build_workbench(self)
+
+    def toggle_advanced(self, checked):
+        self.advanced_panel.setVisible(checked)
+        self.advanced_button.setText('−  Recolher ajustes avançados' if checked else '+  Mostrar ajustes avançados')
+
+    def update_advanced_summary(self, *_):
+        def value(key):
+            return self.fields[key].text().replace('.', ',') or 'não informado'
+        summary = (f"Corte: {value('cut_step_mm')} mm • trecho comum: {value('common_feeder_m')} m • "
+                   f"outras perdas: {value('extra_loss_db')} dB")
+        self.advanced_summary.setText(summary)
+        self.advanced_summary.setToolTip(summary + f" • entrada: {value('input_power_w')} W")
+
+    def toggle_technical(self, checked):
+        self.technical_button.setText('−  Recolher detalhes técnicos' if checked else '+  Ver detalhes técnicos')
+        for key in ('phase', 'power'):
+            self.metric_cards[key].setVisible(checked)
+        for index in range(1, self.result_tabs.count()):
+            self.result_tabs.setTabVisible(index, checked)
+        self.result_tabs.tabBar().setVisible(checked)
+        if not checked:
+            self.result_tabs.setCurrentIndex(0)
+        self.result_detail_stack.setCurrentIndex(1 if checked else 0)
+        self.array.simple = not checked
+        self.array.setMinimumWidth(375 if checked else 260)
+        self.array.setMinimumHeight(420 if checked else 340)
+        self.array.update()
+        self.secondary.setVisible(checked)
+        self.update_warnings()
+
+    def update_warnings(self):
+        if self.result is None:
+            self.warnings.hide()
+            return
+        warnings = self.result.warnings
+        if not self.technical_button.isChecked():
+            translations = {
+                'O espaçamento permite lóbulos de grade. O tilt não define uma direção única de radiação.':
+                    'Com esta distância entre antenas, o sinal também pode apontar em outras direções. Peça a conferência de um técnico.',
+                'Atenuação não informada: eficiência de alimentação e potência entregue indisponíveis.':
+                    'Faltam dados de perda deste material. Não foi possível estimar a energia que chega às antenas.',
+                'Ramal mínimo zero: verifique o percurso físico até cada elemento.':
+                    'O trecho mais curto está em zero. Informe um comprimento que alcance a antena.',
+                'O passo de corte altera a progressão de tilt em mais de 0,1° ou impede sua realização.':
+                    'O arredondamento dos comprimentos altera a inclinação desejada. Revise o passo de corte nos ajustes avançados.',
+                'Potências de catálogo são referências; condições térmicas e de ROE não foram fornecidas.':
+                    'A capacidade de potência ainda precisa de conferência técnica para as condições da instalação.',
+            }
+            # The general catalog-rating limitation is always shown in the footer.
+            warnings = [translations.get(warning, warning) for warning in warnings
+                        if not warning.startswith('Potências de catálogo são referências;')]
+        self.warnings.setText('\n'.join(warnings))
+        self.warnings.setVisible(bool(warnings))
+
+    def choose_example(self):
+        menu = QMenu(self)
+        for title, kind in [('Cabos — planilha fornecida', 'cable'), ('Linha rígida — planilha fornecida', 'rigid')]:
+            action = menu.addAction(title)
+            action.triggered.connect(lambda checked=False, chosen=kind: self.load_example(chosen))
+        menu.exec(self.examples_button.mapToGlobal(self.examples_button.rect().bottomLeft()))
+
+    def reveal_field(self, edit):
+        if self.advanced_panel.isAncestorOf(edit):
+            self.advanced_button.setChecked(True)
+        self.input_scroll.widget().layout().activate()
+        self.input_scroll.ensureWidgetVisible(edit)
+        edit.setProperty('invalid', True)
+        edit.style().unpolish(edit)
+        edit.style().polish(edit)
+        edit.setFocus()
 
     def _catalog_page(self):
         page = QWidget()
@@ -363,7 +242,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.catalog_table, 1)
         self.catalog_detail = label('Selecione um modelo para ver suas características na frequência de trabalho.', 'Subtitle', True)
         layout.addWidget(self.catalog_detail)
-        use = QPushButton('Usar modelo selecionado na bancada')
+        use = QPushButton('Usar este modelo no cálculo')
         use.setObjectName('Primary')
         use.clicked.connect(self.use_catalog_selection)
         layout.addWidget(use, alignment=Qt.AlignmentFlag.AlignLeft)
@@ -371,7 +250,7 @@ class MainWindow(QMainWindow):
         self.catalog_table.itemSelectionChanged.connect(self.describe_catalog_selection)
         self.catalog_table.doubleClicked.connect(self.use_catalog_selection)
         self.refresh_catalog()
-        self.pages.addTab(page, 'Catálogo de cabos e linhas')
+        self.pages.addTab(page, 'Catálogo')
 
     def _projects_page(self):
         page = QWidget()
@@ -392,12 +271,21 @@ class MainWindow(QMainWindow):
         buttons.addStretch()
         layout.addLayout(buttons)
         self.project_table.doubleClicked.connect(self.open_project)
-        self.pages.addTab(page, 'Projetos salvos')
+        self.pages.addTab(page, 'Cálculos salvos')
 
     def _method_page(self):
         browser = QTextBrowser()
         browser.setOpenExternalLinks(True)
-        browser.setHtml('''<h1>Método e convenções</h1>
+        browser.setHtml('''<h1>Como usar</h1>
+        <ol><li>Escolha <b>Cabo coaxial</b> ou <b>Linha rígida</b> e o modelo usado na instalação.</li>
+        <li>Informe a frequência em MHz ou o canal de TV.</li>
+        <li>Informe a quantidade de antenas, a distância entre seus centros, a inclinação desejada e o trecho mais curto.</li></ol>
+        <p>Clique em <b>Calcular comprimentos</b>. A tabela mostra o comprimento para cada antena;
+        E1 é a mais baixa. Salve o cálculo ou exporte o resultado para PDF, CSV ou JSON.</p>
+        <p>Vírgula e ponto são aceitos para decimais. Valores iniciais são apenas um exemplo.
+        Os ajustes avançados permitem informar perdas e medidas técnicas. Recolhê-los mantém os valores.
+        A energia estimada depende das perdas informadas e não representa o rendimento total da antena.</p>
+        <h1>Método e convenções</h1>
         <h2>01 · Tilt e diferença de percurso</h2><p>O eixo vertical cresce de E1 (inferior) para EN (superior).
         Tilt positivo aponta para baixo. O elemento superior recebe avanço de fase, usando um ramal mais curto.</p>
         <p><b>λ₀ = c / f<br>λg = VF × λ₀<br>Δφ = 360° × (d/λ₀) × sen(θ)<br>ΔL = VF × d × sen(θ)</b></p>
@@ -429,7 +317,7 @@ class MainWindow(QMainWindow):
         <li>Catálogo ADT-PY / Rating / CableRating.xml.</li>
         <li><a href="https://www.analog.com/en/resources/analog-dialogue/articles/phased-array-antenna-patterns-part1.html">Analog Devices: fator de arranjo</a></li>
         <li><a href="https://www.analog.com/en/resources/analog-dialogue/articles/phased-array-antenna-patterns-part2.html">Analog Devices: lóbulos de grade e atraso</a></li></ul>''')
-        self.pages.addTab(browser, 'Método e referências')
+        self.pages.addTab(browser, 'Ajuda')
 
     def _clear_error(self):
         field = self.sender()
@@ -447,6 +335,7 @@ class MainWindow(QMainWindow):
         self.save_button.setEnabled(False)
         self.export_button.setEnabled(False)
         self.result_tabs.setEnabled(False)
+        self.answer.setText('Clique em Calcular comprimentos para ver a orientação com os novos dados.')
         for value in self.metrics.values():
             value.setText('—')
         self.warnings.hide()
@@ -457,9 +346,13 @@ class MainWindow(QMainWindow):
         self.channel.setEnabled(derived)
         self.ofdm_offset.setEnabled(derived)
         self.fields['frequency_mhz'].setEnabled(not derived)
+        self.frequency_form.setRowVisible(self.channel, derived)
+        self.frequency_form.setRowVisible(self.fields['frequency_mhz'].parentWidget(), not derived)
+        self.frequency_form.setRowVisible(self.frequency_readout, derived)
         if derived:
             value = channel_frequency(self.channel.value()) + (1/7 if self.ofdm_offset.isChecked() else 0)
             self.fields['frequency_mhz'].setText(f'{value:.9f}'.rstrip('0').rstrip('.'))
+            self.frequency_readout.setText(f'Frequência calculada: {fmt(value, 4)} MHz')
         self.update_line_properties()
 
     def rebuild_models(self, *_):
@@ -484,7 +377,13 @@ class MainWindow(QMainWindow):
         self.override_vf.setEnabled(not custom)
         if custom:
             self.line_info.setText('Dados informados pelo usuário. Atenuação vazia = eficiência indisponível.')
+            self.material_help.setText('Modelo personalizado: informe as características nos ajustes avançados.')
+            if not self.loading:
+                self.advanced_button.setChecked(True)
         else:
+            material = 'cabo' if self.kind.currentData() == 'cable' else 'linha rígida'
+            self.material_help.setText(f'Escolha o modelo do {material}. As características são preenchidas automaticamente.'
+                                      if material == 'cabo' else 'Escolha o modelo da linha rígida. As características são preenchidas automaticamente.')
             try:
                 cable = self.db.cable(self.model.currentText())
                 if not self.override_vf.isChecked():
@@ -506,10 +405,7 @@ class MainWindow(QMainWindow):
         try:
             return parse_decimal(edit.text(), self.field_labels[key])
         except ValueError:
-            edit.setProperty('invalid', True)
-            edit.style().unpolish(edit)
-            edit.style().polish(edit)
-            edit.setFocus()
+            self.reveal_field(edit)
             raise
 
     def read_design(self):
@@ -537,6 +433,19 @@ class MainWindow(QMainWindow):
             result = calculate(design)
         except ValueError as exc:
             self.invalidate()
+            # Domain validation can also identify an invalid value inside a closed panel.
+            prefixes = {'Fator de velocidade:': 'velocity_factor', 'Atenuação:': 'attenuation_db_100m',
+                        'Perdas adicionais:': 'extra_loss_db', 'Potência de entrada:': 'input_power_w',
+                        'Passo de corte:': 'cut_step_mm', 'Espaçamento:': 'spacing_mm', 'Tilt:': 'tilt_deg'}
+            for prefix, key in prefixes.items():
+                if str(exc).startswith(prefix):
+                    self.reveal_field(self.fields[key])
+            if str(exc) == 'Comprimentos fora dos limites da bancada.':
+                for key, maximum in [('shortest_branch_m', 10000), ('common_feeder_m', 100000)]:
+                    if not 0 <= self.number(key) <= maximum:
+                        self.reveal_field(self.fields[key])
+                        exc = ValueError(f'{self.field_labels[key]}: use de 0 a {maximum} m.')
+                        break
             self.error.setText(str(exc))
             self.error.show()
             self.state.setText('Cálculo não executado · corrija a entrada indicada.')
@@ -549,8 +458,8 @@ class MainWindow(QMainWindow):
 
     def render_result(self):
         r, d = self.result, self.result.design
-        self.state.setText(f'Calculado · {d.elements} elementos · {fmt(d.frequency_mhz, 4)} MHz · tilt {fmt(d.tilt_deg, 2)}°')
-        for key, value, digits in [('delta', r.delta_length_m*1000, 3), ('phase', r.phase_step_deg, 3),
+        self.state.setText(f'Calculado · {d.elements} antenas · {fmt(d.frequency_mhz, 4)} MHz · inclinação {fmt(d.tilt_deg, 2)}°')
+        for key, value, digits in [('delta', abs(r.delta_length_m)*1000, 3), ('phase', r.phase_step_deg, 3),
                                   ('efficiency', None if r.feed_efficiency is None else r.feed_efficiency*100, 2),
                                   ('power', r.total_power_w, 1)]:
             self.metrics[key].setText(fmt(value, digits))
@@ -559,6 +468,15 @@ class MainWindow(QMainWindow):
         self.result_tabs.setEnabled(True)
         self.array.set_result(r, self.kind.currentData())
         self.lengths.set_result(r, self.kind.currentData())
+        if d.tilt_deg == 0:
+            self.answer.setText('Sem inclinação: use o mesmo comprimento em todas as antenas. Confira os valores na tabela.')
+        else:
+            direction, length = ('baixo', 'menores') if d.tilt_deg > 0 else ('cima', 'maiores')
+            self.answer.setText(f'Para inclinar {fmt(abs(d.tilt_deg), 2)}° para {direction}, os trechos ficam {length} '
+                                'conforme se sobe na torre. Use os comprimentos da tabela, já ajustados ao passo de corte.')
+        self.length_title.setText('Comprimento de cada cabo' if self.kind.currentData() == 'cable' else 'Comprimento de cada linha')
+        fill_table(self.simple_table, [[f'E{e.number}', 'Inferior' if e.number == 1 else 'Superior' if e.number == d.elements else 'Intermediária',
+                                      fmt(e.length_m*1000, 3)] for e in r.elements])
         angles, pattern = array_pattern(r)
         _, zero = array_pattern(r, untilted=True)
         self.pattern.set_data([('Com tilt', angles, pattern, BLUE), ('Sem tilt', angles, zero, '#96b3ca')],
@@ -599,9 +517,8 @@ class MainWindow(QMainWindow):
         self.secondary.setText(f'λ₀ {fmt(r.wavelength_m*1000)} mm  ·  λg {fmt(r.guided_wavelength_m*1000)} mm  ·  '
                                f'Coerência no alvo {fmt(r.coherence_efficiency*100, 3)}%  ·  '
                                f'Tilt da progressão após corte {fmt(r.fitted_tilt_deg, 4)}°  ·  Perda {fmt(r.equivalent_loss_db)} dB')
-        self.warnings.setText('\n'.join(warnings))
-        self.warnings.setVisible(bool(warnings))
-        self.statusBar().showMessage('Cálculo concluído · Ctrl+S salva uma nova revisão · gráficos disponíveis para inspeção com o mouse')
+        self.update_warnings()
+        self.statusBar().showMessage('Cálculo concluído · Ctrl+S para salvar · gráficos e fórmulas em Detalhes técnicos')
 
     def load_example(self, kind):
         self.loading = True
@@ -625,6 +542,7 @@ class MainWindow(QMainWindow):
         self.update_line_properties()
         self.pages.setCurrentIndex(0)
         self.run_calculation()
+        self.state.setText('Exemplo da planilha carregado · confira os dados antes de usar na sua instalação.')
 
     def refresh_catalog(self):
         query = self.catalog_search.text().strip().casefold()
@@ -712,6 +630,9 @@ class MainWindow(QMainWindow):
             self.loading = False
         # Catalog changes are intentionally applied only on an explicit calculation.
         self.invalidate()
+        self.update_advanced_summary()
+        if payload['model'] == CUSTOM or payload['override_vf']:
+            self.advanced_button.setChecked(True)
         self.pages.setCurrentIndex(0)
         self.state.setText('Revisão carregada · confira as entradas e recalcule com o catálogo atual.')
 
@@ -744,7 +665,7 @@ class MainWindow(QMainWindow):
         printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
         printer.setOutputFileName(str(path))
         printer.setDocName(self.project_name.text())
-        printer.setCreator('EFTX Tilt 1.0.0')
+        printer.setCreator(f'EFTX Tilt {__version__}')
         from PySide6.QtGui import QPageLayout, QPageSize
         from PySide6.QtCore import QMarginsF
         printer.setPageSize(QPageSize(QPageSize.PageSizeId.A4))

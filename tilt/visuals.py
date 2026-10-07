@@ -6,7 +6,7 @@ from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPainterPath
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
 INK = '#172d48'
-MUTED = '#64768c'
+MUTED = '#40536e'
 BLUE = '#2946c7'
 TEAL = '#008caa'
 GRID = '#e3eaf2'
@@ -136,6 +136,7 @@ class ArrayIllustration(QWidget):
         super().__init__(parent)
         self.result = None
         self.kind = 'cable'
+        self.simple = False
         self.setMinimumSize(375, 420)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
@@ -148,13 +149,13 @@ class ArrayIllustration(QWidget):
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         p.fillRect(self.rect(), QColor('#fbfdff'))
         w, h = self.width(), self.height()
-        title = 'Alimentação por cabos' if self.kind == 'cable' else 'Alimentação por linhas rígidas'
+        title = 'Cabos até as antenas' if self.kind == 'cable' else 'Linhas até as antenas'
         text(p, 20, 12, w-40, 25, title, 11, bold=True)
         text(p, 20, 38, w-40, 22, 'Vista lateral · E1 inferior · esquema sem escala', 9, MUTED)
         if not self.result:
             return
         r, d = self.result, self.result.design
-        top, bottom = 91, h-180
+        top, bottom = 91, h-150 if self.simple else h-180
         tower_x = min(190, w*0.38)
         panel_x = tower_x+24
         # Lattice mast: contextual geometry, never used in the RF calculation.
@@ -185,17 +186,26 @@ class ArrayIllustration(QWidget):
             for shift in (8, 15, 22, 29):
                 line(p, panel_x+shift, y-8, panel_x+shift, y+8, color, 1.5)
             text(p, panel_x+49, y-22, w-panel_x-58, 23,
-                 f'E{e.number}   {e.length_m*1000:.1f} mm', 10, color, True)
-            text(p, panel_x+49, y, w-panel_x-58, 19,
-                 f'φ {e.relative_phase_deg:+.2f}°', 9, MUTED)
+                 f'E{e.number}' if self.simple else f'E{e.number}   {e.length_m*1000:.1f} mm', 11 if self.simple else 10, color, True)
+            if self.simple:
+                position = 'Mais baixa' if i == 0 else 'Mais alta' if i == d.elements-1 else ''
+                text(p, panel_x+49, y, w-panel_x-58, 19, position, 9, MUTED)
+            else:
+                text(p, panel_x+49, y, w-panel_x-58, 19, f'φ {e.relative_phase_deg:+.2f}°', 9, MUTED)
         p.setBrush(QColor('#142f53'))
         p.setPen(Qt.PenStyle.NoPen)
         p.drawRoundedRect(QRectF(24, bottom+35, 87, 34), 5, 5)
         text(p, 28, bottom+35, 79, 34, f'Divisor 1:{d.elements}', 9, 'white', True,
              Qt.AlignmentFlag.AlignCenter)
-        text(p, 127, bottom+37, w-140, 31, f'd = {d.spacing_m*1000:.1f} mm   ·   θ = {d.tilt_deg:+.2f}°', 9, BLUE)
+        text(p, 127, bottom+37, w-140, 31,
+             'Do transmissor às antenas' if self.simple else f'd = {d.spacing_m*1000:.1f} mm   ·   θ = {d.tilt_deg:+.2f}°', 9, BLUE)
         if d.elements > 8:
-            text(p, 20, 65, w-40, 18, f'8 dos {d.elements} elementos; tabela completa na aba de comprimentos.', 8, MUTED)
+            text(p, 20, 65, w-40, 18, f'8 das {d.elements} antenas; todas estão na tabela.', 8, MUTED)
+        if self.simple:
+            line(p, 20, h-60, w-20, h-60)
+            text(p, 20, h-55, w-40, 42, 'Cada conexão E1, E2… corresponde\na uma linha da tabela.', 10, MUTED)
+            p.end()
+            return
         line(p, 20, h-95, w-20, h-95)
         # Longitudinal section: cable dielectric versus rigid air-line.
         y = h-61

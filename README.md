@@ -7,7 +7,7 @@ Identidade visual: logo **EFTX ANTENNAS** fornecido pelo usuário.
 ## Executar no Windows
 
 - Ambiente preparado: abra **`iniciar.cmd`**.
-- Distribuição portátil: abra **`dist/EFTX_Tilt/EFTX_Tilt.exe`**. A pasta
+- Distribuição portátil 1.1: abra **`dist/1.1.0/EFTX_Tilt/EFTX_Tilt.exe`**. A pasta
   `_internal` deve permanecer junto ao executável; não é necessário instalar Python.
 - Instalação a partir do código (Python 3.11 ou superior):
 
@@ -24,17 +24,31 @@ Para definir outro banco:
 .\.venv\Scripts\python.exe -m tilt --database D:\projetos\meu_tilt.sqlite3
 ```
 
-## Fluxo da bancada
+## Uso em três passos
 
-1. Informe frequência em MHz **ou** escolha canal TV. O modo de canal calcula o
-   centro geométrico de 6 MHz; o deslocamento +1/7 MHz é opcional.
-2. Escolha cabo coaxial ou linha rígida e pesquise o modelo na lista.
-3. Defina número de elementos (2–64), espaçamento, tilt, ramal mínimo e passo de corte.
-4. Informe linha comum, perdas adicionais e potência antes da alimentação.
-5. Clique **Calcular** (`Ctrl+Enter`); confira esquema, diagrama, comprimentos e perdas.
-6. **Salvar revisão** (`Ctrl+S`) preserva uma nova cópia das entradas e resultados.
-   Abrir uma revisão exige recalcular antes de exportar.
-7. Exporte PDF ilustrado, CSV com separador `;` ou memória JSON.
+1. Clique em **Cabo coaxial** ou **Linha rígida** e escolha o modelo na lista.
+2. Informe a frequência em MHz **ou** o canal de TV.
+3. Informe a quantidade de antenas, a distância entre seus centros em mm,
+   a inclinação desejada em graus e o trecho mais curto em metros.
+
+Clique em **Calcular comprimentos** (`Ctrl+Enter`). A tela mostra uma orientação
+em texto, o esquema das conexões, os comprimentos de E1 (inferior) até EN (superior)
+e a energia estimada que chega às antenas. Os valores iniciais são um exemplo.
+
+**Mostrar ajustes avançados** abre fator de velocidade, perdas, trecho comum,
+potência, passo de corte e referência de cálculo. Recolher mantém os valores;
+o resumo indica o passo de corte e as perdas adicionais em uso. O modelo
+personalizado abre automaticamente os campos necessários. Um erro em um campo
+avançado abre o painel para permitir a correção.
+
+**Ver detalhes técnicos** abre fase, potência, curvas, tabela completa e memória
+de cálculo. **Salvar cálculo** (`Ctrl+S`) cria uma nova revisão no banco local.
+Ao abrir uma revisão, recalcule antes de exportar. **Exportar** gera PDF ilustrado,
+CSV com separador `;` ou JSON.
+
+O canal usa centro geométrico de 6 MHz; o deslocamento +1/7 MHz é opcional nos
+ajustes avançados. A seleção de material aplica um único modelo ao cálculo:
+cabo coaxial **ou** linha rígida, incluindo eventual trecho antes do divisor.
 
 Entradas numéricas aceitam vírgula ou ponto decimal, sem separadores de milhar.
 Valores inválidos são rejeitados. Alterar uma entrada desativa os resultados
@@ -65,7 +79,7 @@ usa um percurso mais curto e recebe avanço de fase. O padrão inicial de consta
 ΔL = VF × d × sen(θ)
 ```
 
-Os botões **Exemplo: cabo** e **Exemplo: rígida** reproduzem os casos fornecidos.
+Em **Ajustes avançados → Carregar exemplo**, escolha a planilha de cabo ou linha rígida.
 Consulte [a memória de engenharia](docs/engenharia.md) para unidades, equações,
 fixtures, origem dos dados e limites.
 
@@ -98,6 +112,8 @@ inspeção das fontes XLS. A aplicação não executa macros ou instruções das
 tilt/engineering.py    equações RF e validação, independentes de Qt
 tilt/storage.py        catálogo e revisões SQLite
 tilt/window.py         bancada, catálogo, projetos e exportações
+tilt/workbench.py      fluxo simples e painéis avançados
+tilt/theme.py          contraste de controles e paleta clara explícita
 tilt/visuals.py        ilustrações e gráficos vetoriais Qt
 tilt/reports.py        memória HTML, CSV e JSON
 tilt/data/cables.json  catálogo portátil com origem e SHA-256

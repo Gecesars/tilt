@@ -13,6 +13,7 @@ from PySide6.QtWidgets import QApplication
 from tilt.storage import Database
 from tilt.window import CUSTOM, MainWindow
 from tilt.reports import export_csv, export_json, report_html, snapshot
+from tilt.reports import fmt
 
 
 @pytest.fixture(scope='session')
@@ -121,3 +122,122 @@ def test_exports_have_actual_results_and_escape_titles(window, tmp_path):
     path = tmp_path/'result.json'
     export_json(path, snapshot(window.result, CUSTOM, window.db.catalog_hash))
     assert json.loads(path.read_text(encoding='utf-8'))['result']['feed_efficiency'] is None
+
+
+def test_simple_view_shows_lengths_and_hides_technical_controls(window):
+    assert window.advanced_panel.isHidden()
+    assert window.metric_cards['phase'].isHidden()
+    assert not window.result_tabs.isTabVisible(1)
+    assert window.result_detail_stack.currentIndex() == 0
+    assert 'Exemplo inicial' in window.state.text()
+    assert window.simple_table.rowCount() == window.result.design.elements
+    for row, element in enumerate(window.result.elements):
+        assert window.simple_table.item(row, 2).text() == fmt(element.length_m*1000, 3)
+
+
+def test_material_buttons_filter_models_and_change_illustration(window):
+    for index, kind in [(1, 'rigid'), (0, 'cable')]:
+        QTest.mouseClick(window.kind_buttons.button(index), Qt.MouseButton.LeftButton)
+        assert window.kind.currentData() == kind
+        assert window.kind_buttons.checkedId() == index
+        names = [window.model.itemText(i) for i in range(window.model.count())]
+        assert set(names) == {c.name for c in window.db.cables(kind)} | {CUSTOM}
+        assert window.result is None
+        assert window.run_calculation()
+        assert window.array.kind == kind
+
+
+def test_collapsing_details_preserves_calculation_and_all_inputs(window):
+    window.advanced_button.setChecked(True)
+    window.fields['common_feeder_m'].setText('15,5')
+    window.fields['extra_loss_db'].setText('0,4')
+    assert window.run_calculation()
+    before = window.calculated_payload.copy()
+    result = window.result
+    window.advanced_button.setChecked(False)
+    window.technical_button.setChecked(True)
+    assert window.result_tabs.isTabVisible(3)
+    assert window.result_detail_stack.currentIndex() == 1
+    window.result_tabs.setCurrentIndex(2)
+    window.technical_button.setChecked(False)
+    assert window.result_tabs.currentIndex() == 0
+    assert window.result is result
+    assert window.calculated_payload == before
+    assert window.read_design() == result.design
+    assert window.save_button.isEnabled()
+    assert '15,5' in window.advanced_summary.text()
+
+
+@pytest.mark.parametrize('value', ['abc', '-1'])
+def test_invalid_hidden_advanced_field_reopens_panel(window, value):
+    window.fields['input_power_w'].setText(value)
+    window.advanced_button.setChecked(False)
+    assert not window.run_calculation()
+    assert window.advanced_button.isChecked()
+    assert not window.advanced_panel.isHidden()
+    assert window.fields['input_power_w'].property('invalid')
+
+
+def test_custom_model_exposes_required_characteristics(window):
+    window.model.setCurrentText(CUSTOM)
+    assert window.advanced_button.isChecked()
+    assert window.fields['velocity_factor'].isEnabled()
+    assert window.fields['attenuation_db_100m'].text() == ''
+
+
+def test_invalid_hidden_common_feeder_can_be_corrected(window):
+    window.fields['common_feeder_m'].setText('-1')
+    assert not window.run_calculation()
+    assert window.advanced_button.isChecked()
+    assert 'Trecho antes do divisor' in window.error.text()
+    window.fields['common_feeder_m'].setText('5')
+    assert window.run_calculation()
+
+
+def test_channel_mode_only_shows_relevant_frequency_controls(window):
+    window.frequency_mode.setCurrentIndex(1)
+    window.channel.setValue(14)
+    assert not window.channel.isHidden()
+    assert window.fields['frequency_mhz'].parentWidget().isHidden()
+    assert '473,0000 MHz' in window.frequency_readout.text()
+    window.frequency_mode.setCurrentIndex(0)
+    assert window.channel.isHidden()
+    assert window.frequency_readout.isHidden()
+    assert not window.fields['frequency_mhz'].parentWidget().isHidden()
+
+
+@pytest.mark.parametrize('tilt, wording', [(2, 'menores'), (-2, 'maiores'), (0, 'mesmo comprimento')])
+def test_plain_language_direction_matches_computed_lengths(window, tilt, wording):
+    window.fields['tilt_deg'].setText(str(tilt))
+    assert window.run_calculation()
+    assert wording in window.answer.text()
+    lower, upper = window.result.elements[0].length_m, window.result.elements[-1].length_m
+    assert (lower > upper) if tilt > 0 else (upper > lower) if tilt < 0 else lower == upper
+
+
+def test_simple_view_preserves_engineering_warnings(window):
+    assert any('lóbulos' in text for text in window.result.warnings)
+    assert 'outras direções' in window.warnings.text()
+    window.technical_button.setChecked(True)
+    assert 'lóbulos' in window.warnings.text()
+    window.technical_button.setChecked(False)
+    assert 'outras direções' in window.warnings.text()
+
+
+def test_control_palette_is_readable_even_after_dark_system_palette(app):
+    from PySide6.QtGui import QColor, QPalette
+    dark = QPalette()
+    dark.setColor(QPalette.ColorRole.Text, QColor('white'))
+    dark.setColor(QPalette.ColorRole.Base, QColor('#222222'))
+    app.setPalette(dark)
+    db = Database(':memory:')
+    widget = MainWindow(db)
+    try:
+        palette = app.palette()
+        assert palette.color(QPalette.ColorRole.Text).name() == '#172d48'
+        assert palette.color(QPalette.ColorRole.Base).name() == '#ffffff'
+        assert palette.color(QPalette.ColorRole.HighlightedText).name() == '#ffffff'
+        assert palette.color(QPalette.ColorRole.Highlight).name() == '#123c8b'
+    finally:
+        widget.close()
+        db.close()

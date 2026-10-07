@@ -3,7 +3,37 @@
 Ambiente: Windows 11 x64, Python 3.12.10, PySide6 6.11.2,
 SQLite da biblioteca padrão, PyInstaller 6.22.3.
 
-## Executado
+## Interface 1.1.0 — revisão para uso por leigos
+
+- **77 testes aprovados**, incluindo os 64 testes da versão anterior.
+- Fluxo em três passos; botões de cabo coaxial e linha rígida conferidos com
+  filtragem real do catálogo e atualização da ilustração.
+- Painéis avançados recolhidos no início; recolher e reabrir preserva entradas,
+  cálculo e capacidade de salvar. Erros numéricos em campos avançados abrem
+  o painel, incluindo potência e comprimento do trecho comum.
+- Conversão canal/frequência, direção da inclinação positiva/negativa/zero,
+  tabela simples de comprimentos e avisos técnicos verificados por testes Qt.
+- Paleta clara explícita conferida após simular uma paleta de sistema escura.
+  Contraste calculado das cores: texto principal 13,95:1; texto secundário
+  6,96:1; texto dos botões azuis 10,27:1; bordas dos campos 4,48:1.
+  Isso verifica essas combinações, não constitui auditoria completa de acessibilidade.
+- Capturas inspecionadas em 1540×1000, 1366×768 e 1100×760, com rolagem nas
+  janelas menores. Lista suspensa, seleção de material, tabela simples,
+  ajustes avançados, detalhes técnicos, comprimentos e perdas conferidos.
+- PDFs de cabos e linhas rígidas regenerados: quatro páginas em cada um;
+  conteúdo extraído e páginas de figuras conferidas visualmente com Poppler.
+- Executável **dist/1.1.0/EFTX_Tilt/EFTX_Tilt.exe** testado em Qt offscreen
+  e Windows nativo; ambos encerraram com código 0. Cada banco de teste
+  confirmou os 47 modelos e 1669 amostras.
+- Motor RF, catálogo e formato das revisões SQLite preservados. A identificação
+  1.1.0 no título permite distinguir a nova janela de uma versão anterior aberta.
+- A distribuição usa uma pasta por versão para não substituir arquivos de uma
+  instância anterior em execução.
+
+Ainda não realizado: teste de usabilidade com pessoas leigas, leitor de tela
+e instalação em outro computador limpo.
+
+## Versão inicial 1.0.0 — executado
 
 - `python -m pytest -q`: **64 testes aprovados**.
 - Paridade com as duas planilhas XLS: tolerância absoluta de `1e-9 mm` para
