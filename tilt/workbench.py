@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QTabWidget, QTextBrowser, QVBoxLayout, QWidget,
 )
 
-from .engineering import C_SI, C_WORKSHEET
+from .engineering import C_SI, C_WORKSHEET, ELEMENT_PATTERNS, LENGTH_REFERENCES
 from .visuals import ArrayIllustration, LengthIllustration, SeriesChart
 
 
@@ -89,6 +89,13 @@ def build_workbench(self):
     self.elements.setValue(4)
     self.elements.valueChanged.connect(self.invalidate)
     form.addRow('Quantas antenas?', self.elements)
+    self.element_pattern = QComboBox()
+    for key, caption in ELEMENT_PATTERNS.items():
+        self.element_pattern.addItem('Dipolo vertical λ/2' if key == 'half_wave_vertical' else 'Isotrópico (técnico)', key)
+        self.element_pattern.setItemData(self.element_pattern.count()-1, caption, Qt.ItemDataRole.ToolTipRole)
+    self.element_pattern.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
+    self.element_pattern.currentIndexChanged.connect(self.invalidate)
+    form.addRow('Antena (aprox.)', self.element_pattern)
     self.auto_spacing = QCheckBox('Espaçamento automático: 1 λ')
     self.auto_spacing.setChecked(True)
     self.auto_spacing.setToolTip('Preenche a distância com um comprimento de onda no espaço livre (c/f). Ao editar a distância, o modo passa para manual.')
@@ -97,7 +104,7 @@ def build_workbench(self):
     self.lambda_info = label('', 'Subtitle', True)
     form.addRow(self.lambda_info)
     self._field(form, 'tilt_deg', 'Inclinação desejada', 2, '°', 'Valor positivo inclina para baixo. Valor negativo inclina para cima.')
-    self._field(form, 'shortest_branch_m', 'Trecho mais curto', 3, 'm', 'Comprimento do menor cabo ou linha entre o divisor e uma antena. Deve alcançar a antena.')
+    self._field(form, 'shortest_branch_m', 'Trecho mais curto', 3, 'm', 'Medida de malha a malha (extremidades da blindagem); na linha rígida, entre extremidades do condutor externo. Não inclui pontas expostas ou conectores.')
     form.addRow(label('Distância: de centro a centro. Inclinação: positiva para baixo; negativa para cima.', 'Subtitle', True))
 
     self.advanced_button = QPushButton('+  Mostrar ajustes avançados')
@@ -108,6 +115,12 @@ def build_workbench(self):
     advanced_layout = QVBoxLayout(self.advanced_panel)
     advanced_layout.setContentsMargins(0, 0, 0, 0)
     form = self._group('Características e perdas', advanced_layout)
+    self.length_reference = QComboBox()
+    for key, caption in LENGTH_REFERENCES.items():
+        self.length_reference.addItem(caption, key)
+    self.length_reference.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
+    self.length_reference.currentIndexChanged.connect(self.invalidate)
+    form.addRow('Referência da medida', self.length_reference)
     self.override_vf = QCheckBox('Informar fator de velocidade medido')
     form.addRow(self.override_vf)
     self._field(form, 'velocity_factor', 'Fator de velocidade', .88, 'v/c')
@@ -190,6 +203,8 @@ def build_workbench(self):
     self.answer = label('', 'Answer', True)
     self.answer.setTextFormat(Qt.TextFormat.PlainText)
     content.addWidget(self.answer)
+    self.rating_summary = label('', 'State', True)
+    content.addWidget(self.rating_summary)
     self.warnings = label('', 'Notice', True)
     content.addWidget(self.warnings)
     self.technical_button = QPushButton('+  Ver detalhes técnicos')
@@ -210,13 +225,14 @@ def build_workbench(self):
     self.length_title.setStyleSheet('font-weight:600;font-size:12pt;')
     simple_layout.addWidget(self.length_title)
     simple_layout.addWidget(label('Leia de baixo para cima na torre.', 'Subtitle', True))
-    self.simple_table = table(['Antena', 'Posição', 'Comprimento\n(mm)'])
+    self.simple_table = table(['Antena', 'Malha a malha\n(mm)', 'Dif. anterior\n(mm)', 'Dif. E1\n(mm)'])
     self.simple_table.verticalHeader().setDefaultSectionSize(38)
     simple_layout.addWidget(self.simple_table, 1)
-    simple_layout.addWidget(label('Medidas entre as conexões. Confira o percurso e o ajuste dos conectores antes de cortar.', 'Subtitle', True))
+    self.measure_note = label('', 'Subtitle', True)
+    simple_layout.addWidget(self.measure_note)
     self.result_detail_stack.addWidget(simple)
     visuals.addWidget(self.result_detail_stack)
-    visuals.setSizes([410, 490])
+    visuals.setSizes([280, 620])
     self.result_tabs.addTab(visuals, 'Resultado')
     cut_page = QWidget()
     cut_layout = QVBoxLayout(cut_page)

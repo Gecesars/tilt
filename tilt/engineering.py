@@ -1,14 +1,23 @@
 """Pure RF model. Positive tilt points down; E1 is the lowest element.
 
 All lengths are metres internally. The model is an equal-power parallel feed,
-with identical elements and no mutual coupling or individual element pattern.
+with identical elements and no mutual coupling. Element pattern is explicit.
 """
 from dataclasses import asdict, dataclass
 import math
+from .specification import LineSpecification
 
 C_SI = 299_792_458.0
 C_WORKSHEET = 300_000_000.0
-ENGINE_VERSION = '1.1.0'
+ENGINE_VERSION = '1.2.0'
+ELEMENT_PATTERNS = {
+    'half_wave_vertical': 'Dipolo vertical de meia onda (aproximação)',
+    'isotropic': 'Isotrópico — somente fator de arranjo',
+}
+LENGTH_REFERENCES = {
+    'shield_edges': 'Malha a malha / extremidades do condutor externo',
+    'electrical_planes': 'Planos elétricos de referência (legado)',
+}
 
 
 def finite(value, label):
@@ -68,12 +77,20 @@ class Design:
     input_power_w: float = 1000.0
     cut_step_mm: float = 0.1
     speed_m_s: float = C_WORKSHEET
+    element_pattern: str = 'isotropic'
+    length_reference: str = 'electrical_planes'
 
     def validate(self):
         for name, value in asdict(self).items():
+            if name in ('element_pattern', 'length_reference'):
+                continue
             if name == 'attenuation_db_100m' and value is None:
                 continue
             finite(value, name)
+        if self.element_pattern not in ELEMENT_PATTERNS:
+            raise ValueError('Diagrama do elemento inválido.')
+        if self.length_reference not in LENGTH_REFERENCES:
+            raise ValueError('Referência de comprimento inválida.')
         if type(self.elements) is not int or not 2 <= self.elements <= 64:
             raise ValueError('Quantidade de elementos: use um inteiro entre 2 e 64.')
         if not 0.1 <= self.frequency_mhz <= 100_000:
@@ -108,6 +125,8 @@ class Element:
     phase_error_deg: float
     loss_db: float | None
     power_w: float | None
+    delta_previous_m: float | None
+    delta_e1_m: float
 
 
 @dataclass(frozen=True)
@@ -126,6 +145,7 @@ class Result:
     elements: tuple[Element, ...]
     grating_angles_deg: tuple[float, ...]
     warnings: tuple[str, ...]
+    line_specification: LineSpecification | None = None
 
 
 def calculate(design: Design) -> Result:
@@ -149,7 +169,8 @@ def calculate(design: Design) -> Result:
         loss = (common_loss + actual * d.attenuation_db_100m / 100
                 if common_loss is not None else None)
         power = d.input_power_w / d.elements * 10 ** (-loss / 10) if loss is not None else None
-        rows.append(Element(i + 1, i * d.spacing_m, target, actual, actual_phase, error, loss, power))
+        rows.append(Element(i + 1, i * d.spacing_m, target, actual, actual_phase, error, loss, power,
+                            actual-lengths[i-1] if i else None, actual-lengths[0]))
         # Common losses cancel in coherence. Scaling by the shortest branch
         # avoids underflow for very large but finite attenuation inputs.
         relative_loss = (d.attenuation_db_100m or 0) * (actual-min(lengths)) / 100
@@ -182,7 +203,7 @@ def calculate(design: Design) -> Result:
             grating.append(math.degrees(math.asin(-sine + m * ratio)))
     warnings = []
     if grating:
-        warnings.append('O espaçamento permite lóbulos de grade. O tilt não define uma direção única de radiação.')
+        warnings.append('O fator de arranjo admite lóbulos de grade. O nível no diagrama completo depende do padrão de cada antena.')
     if d.attenuation_db_100m is None:
         warnings.append('Atenuação não informada: eficiência de alimentação e potência entregue indisponíveis.')
     if d.shortest_branch_m == 0:
@@ -237,7 +258,33 @@ class VerticalPatterns:
     sampling_limited: bool
 
 
-def vertical_patterns(result: Result, start=-90.0, stop=90.0) -> VerticalPatterns:
+def element_field(angle, model):
+    """Normalized field of a thin, vertical half-wave dipole in free space.
+
+    Elevation e is measured from the horizon: cos(pi/2*sin(e))/cos(e).
+    The equivalent expression below avoids cancellation near the axial nulls.
+    """
+    finite(angle, 'Elevação')
+    if not -90 <= angle <= 90 or model not in ELEMENT_PATTERNS:
+        raise ValueError('Elevação ou diagrama do elemento inválido.')
+    if model == 'isotropic':
+        return 1.0
+    if abs(angle) == 90:
+        return 0.0
+    rad = math.radians(angle)
+    cosine = math.cos(rad)
+    return min(1.0, math.sin(math.pi/2*cosine*cosine/(1+abs(math.sin(rad))))/cosine)
+
+
+def radiation_pattern(result, angles=None, untilted=False):
+    angles, af = array_pattern(result, angles, untilted)
+    # Pattern multiplication in field, hence 20 log10, with a common display floor.
+    # AF's existing floor cannot change any visible result when element field <= 1.
+    return angles, [max(-60.0, db + 20*math.log10(max(1e-300, element_field(a, result.design.element_pattern))))
+                    for a, db in zip(angles, af)]
+
+
+def vertical_patterns(result: Result, start=-90.0, stop=90.0, *, factor_only=False) -> VerticalPatterns:
     """Viewport sampling with 32 samples per fastest spatial phase cycle.
 
     The bounded grid avoids UI stalls for extreme apertures; a limit flag must
@@ -258,6 +305,7 @@ def vertical_patterns(result: Result, start=-90.0, stop=90.0) -> VerticalPattern
     angles = sorted(set(angles))
     from dataclasses import replace
     ideal = calculate(replace(result.design, cut_step_mm=0))
-    return VerticalPatterns(tuple(angles), tuple(array_pattern(result, angles)[1]),
-                            tuple(array_pattern(ideal, angles)[1]),
-                            tuple(array_pattern(result, angles, untilted=True)[1]), needed > count)
+    pattern = array_pattern if factor_only else radiation_pattern
+    return VerticalPatterns(tuple(angles), tuple(pattern(result, angles)[1]),
+                            tuple(pattern(ideal, angles)[1]),
+                            tuple(pattern(result, angles, untilted=True)[1]), needed > count)

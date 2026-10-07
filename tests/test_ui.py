@@ -113,7 +113,7 @@ def test_simple_view_shows_lengths_and_hides_technical_controls(window):
     assert 'Exemplo inicial' in window.state.text()
     assert window.simple_table.rowCount() == window.result.design.elements
     for row, element in enumerate(window.result.elements):
-        assert window.simple_table.item(row, 2).text() == fmt(element.length_m*1000, 3)
+        assert window.simple_table.item(row, 1).text() == fmt(element.length_m*1000, 3)
 
 
 def test_material_buttons_filter_models_and_change_illustration(window):

@@ -268,3 +268,41 @@ class LengthIllustration(QWidget):
         text(p, 20, h-50, w-40, 30,
              f'ΔL por nível: {r.delta_length_m*1000:+.4f} mm   |   corte: {r.design.cut_step_mm:g} mm', 10, BLUE, True)
         p.end()
+
+
+class FabricationIllustration(QWidget):
+    """Every specified branch, with dimension endpoints on the external conductor."""
+    def __init__(self, result, kind, elements, parent=None):
+        super().__init__(parent)
+        self.result, self.kind, self.elements = result, kind, elements
+
+    def paintEvent(self, event):
+        from .reports import fmt
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.fillRect(self.rect(), QColor('white'))
+        w = self.width()
+        shield = self.result.design.length_reference == 'shield_edges'
+        caption = ('Malha a malha' if self.kind == 'cable' else 'Extremidades do condutor externo') if shield else 'Planos elétricos de referência'
+        text(p, 16, 8, w-32, 28, caption, 12, BLUE, True)
+        text(p, 16, 39, w-32, 24, 'Cotas em mm; pontas e conectores fora da medida. Desenho sem escala.', 9, MUTED)
+        maximum = max(e.length_m for e in self.result.elements) or 1
+        start, available = 84, w-140
+        for index, e in enumerate(self.elements):
+            y = 91+index*80
+            end = start+max(35, available*e.length_m/maximum)
+            text(p, 16, y-8, 60, 24, f'E{e.number}', 11, BLUE, True)
+            line(p, start-15, y, end+15, y, '#bd792f', 4)
+            p.setBrush(QColor('#dce7f3'))
+            p.setPen(QPen(QColor(BLUE), 1.5))
+            p.drawRect(QRectF(start, y-8, end-start, 16))
+            if self.kind == 'cable':
+                for x in range(round(start), round(end)-8, 9):
+                    line(p, x, y-7, x+7, y+7, '#59738c', .7)
+            for x in (start, end):
+                line(p, x, y-13, x, y+28, '#142f53', 1, True)
+            line(p, start, y+21, end, y+21, BLUE, 1)
+            text(p, start, y+25, available, 21, f'L = {fmt(e.length_m*1000)} mm', 10, BLUE, True)
+            previous = '—' if e.delta_previous_m is None else fmt(e.delta_previous_m*1000)
+            text(p, start, y+46, available, 21, f'Dif. anterior: {previous} mm     |     Dif. E1: {fmt(e.delta_e1_m*1000)} mm', 9, MUTED)
+        p.end()

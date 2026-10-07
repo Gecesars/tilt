@@ -2,7 +2,7 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPushButton, QTabWidget, QVBoxLayout, QWidget
 
-from .engineering import parse_decimal, vertical_patterns
+from .engineering import ELEMENT_PATTERNS, parse_decimal, vertical_patterns
 from .reports import fmt
 from .visuals import BLUE, TEAL, SeriesChart
 
@@ -63,19 +63,21 @@ class DiagramPage(QWidget):
         self.summary.setObjectName('State')
         layout.addWidget(self.summary)
         self.tabs = QTabWidget()
-        self.db_chart = SeriesChart('Fator de arranjo vertical', 'Comparação antes e depois do corte')
+        self.db_chart = SeriesChart('Diagrama vertical completo', 'Elemento × fator de arranjo')
         self.linear_chart = SeriesChart('Campo relativo', 'Mesma referência de amplitude em todas as curvas')
-        for chart in (self.db_chart, self.linear_chart):
+        self.factor_chart = SeriesChart('Fator de arranjo isolado', 'Não inclui a resposta angular da antena')
+        for chart in (self.db_chart, self.linear_chart, self.factor_chart):
             chart.dashed_series = {'Comprimentos ideais', 'Sem tilt'}
         self.tabs.addTab(self.db_chart, 'Em decibéis (dB)')
         self.tabs.addTab(self.linear_chart, 'Campo relativo (0 a 1)')
+        self.tabs.addTab(self.factor_chart, 'Fator de arranjo (técnico)')
         layout.addWidget(self.tabs, 1)
         self.notice = QLabel()
         self.notice.setWordWrap(True)
         self.notice.setObjectName('Notice')
         self.notice.hide()
         layout.addWidget(self.notice)
-        footer = QLabel('Modelo de antenas ideais (isotrópicas), sem diagrama individual ou acoplamento. '
+        self.footer = footer = QLabel(''
                         'Referência: soma coerente das amplitudes de cada curva; o zoom não altera a normalização. '
                         'A curva sem tilt mantém as amplitudes e zera as fases. Piso visual: −60 dB.')
         footer.setWordWrap(True)
@@ -86,6 +88,7 @@ class DiagramPage(QWidget):
         self.result = None
         self.db_chart.set_data([])
         self.linear_chart.set_data([])
+        self.factor_chart.set_data([])
         self.summary.setText('Entradas alteradas. Volte a Calcular e atualize os comprimentos.')
         self.notice.hide()
 
@@ -123,17 +126,24 @@ class DiagramPage(QWidget):
             return
         r = self.result
         data = vertical_patterns(r, *self.view_range)
+        self.db_chart.title = ('Diagrama vertical completo' if r.design.element_pattern != 'isotropic' else 'Fator de arranjo — elemento isotrópico')
+        self.footer.setText(ELEMENT_PATTERNS[r.design.element_pattern] + '. Diagrama analítico; sem torre, solo ou acoplamento. '
+                            '0 dB = soma coerente das amplitudes com máximo do elemento; zoom não renormaliza. '
+                            'Piso visual −60 dB. A direção do pico resultante pode diferir do tilt da progressão.')
         for chart, linear in [(self.db_chart, False), (self.linear_chart, True)]:
             chart.set_data(pattern_series(data, linear), 'Elevação (°)',
                            'Campo relativo' if linear else 'Campo relativo (dB)', self.view_range,
                            (0, 1.05) if linear else (-60, 0), -r.design.tilt_deg)
+        factor = vertical_patterns(r, *self.view_range, factor_only=True)
+        self.factor_chart.set_data(pattern_series(factor), 'Elevação (°)', 'Campo relativo (dB)',
+                                   self.view_range, (-60, 0), -r.design.tilt_deg)
         self.summary.setText(f'Inclinação solicitada: {fmt(r.design.tilt_deg)}° • '
                              f'Progressão após corte: {fmt(r.fitted_tilt_deg, 4)}° • '
                              f'Espaçamento: {fmt(r.design.spacing_m/r.wavelength_m, 4)} λ • '
                              f'Coerência no alvo: {fmt(r.coherence_efficiency*100, 3)}%')
         notes = []
         if r.grating_angles_deg:
-            notes.append('Há outras direções de máximo (lóbulos de grade). O tilt não define um feixe único.')
+            notes.append('O fator de arranjo admite lóbulos de grade; o diagrama completo inclui a atenuação angular da antena.')
         if not self.view_range[0] <= -r.design.tilt_deg <= self.view_range[1]:
             notes.append('A direção de tilt solicitada está fora da faixa exibida.')
         if data.sampling_limited:

@@ -204,8 +204,8 @@ class MainWindow(QMainWindow):
         warnings = self.result.warnings
         if not self.technical_button.isChecked():
             translations = {
-                'O espaçamento permite lóbulos de grade. O tilt não define uma direção única de radiação.':
-                    'Com esta distância entre antenas, o sinal também pode apontar em outras direções. Peça a conferência de um técnico.',
+                'O fator de arranjo admite lóbulos de grade. O nível no diagrama completo depende do padrão de cada antena.':
+                    'O sinal também pode irradiar em outras direções. Veja os níveis estimados na aba Diagramas.',
                 'Atenuação não informada: eficiência de alimentação e potência entregue indisponíveis.':
                     'Faltam dados de perda deste material. Não foi possível estimar a energia que chega às antenas.',
                 'Ramal mínimo zero: verifique o percurso físico até cada elemento.':
@@ -310,6 +310,10 @@ class MainWindow(QMainWindow):
         <p>Para as mesmas geometria e VF, ΔL é independente da frequência. A fase e as perdas variam com a frequência.
         A aplicação usa comprimento total, sem reduzir módulo λg, preservando o atraso real.</p>
         <h2>02 · Comprimentos de fabricação</h2><p>Informe o ramal mais curto e confira que todos os caminhos podem ser montados.
+        Nos novos projetos, a referência é malha a malha: entre extremidades da blindagem, medida ao longo do cabo;
+        na linha rígida, extremidades do condutor externo. Não inclui pontas expostas nem conectores.
+        Terminações são consideradas iguais em todos os ramais. Diferenças de fase nos conectores exigem compensação medida.
+        A tabela mostra diferenças após arredondar, em relação ao ramal anterior e a E1. Negativo significa mais curto.
         Os comprimentos ideais são deslocados por uma constante comum para manter o mínimo informado.
         O passo de corte arredonda cada comprimento individualmente. Fases e erros usam os comprimentos arredondados.</p>
         <p>Linhas rígidas usam o mesmo princípio de percurso elétrico. O valor é a diferença de comprimento elétrico convertida
@@ -324,13 +328,21 @@ class MainWindow(QMainWindow):
         Atenuação e potência média são interpoladas em escala log-log apenas entre amostras do próprio modelo.
         Valores fora da faixa são bloqueados. As potências nominais do catálogo não incluem validação térmica,
         de altitude, temperatura, conectores, ROE ou ciclo de trabalho.</p>
+        <p>O resultado mostra a potência média máxima de referência na frequência informada, a potência de pico
+        de catálogo e a comparação com a entrada dos ramais e da linha comum. Pico não substitui a potência média;
+        sem fator de crista, a condição de pico não é verificada. O PDF e a revisão SQLite preservam limites,
+        amostras usadas, margens de potência, referência de medida e todas as diferenças de comprimento.</p>
         <p>O modo personalizado aceita VF informado. Atenuação desconhecida mantém perdas e eficiência indisponíveis.
         O campo VF medido substitui explicitamente o VF do catálogo. Conectores e descontinuidades requerem medição de fase.</p>
         <p>A conversão de canal usa centro geométrico de canais TV de 6 MHz (2–69, incluindo canais históricos).
         O deslocamento +1/7 MHz é opcional. Esta tabela não verifica disponibilidade, destinação ou autorização de uso.</p>
-        <h2>05 · Diagrama e limites</h2><p>O gráfico representa somente o fator de arranjo de elementos idênticos isotrópicos,
-        sem padrão individual, terreno, estrutura da torre, acoplamento ou descasamento. Não é ganho em dBi.
-        Lóbulos de grade são sinalizados quando existem outras soluções visíveis da progressão ideal.</p>
+        <h2>05 · Diagrama e limites</h2><p>O modelo inicial é uma aproximação por dipolos verticais de meia onda.
+        Campo total = campo do elemento × fator de arranjo. O padrão do dipolo é
+        cos[(π/2) sen(e)] / cos(e), com nulos físicos em ±90° de elevação.
+        A aba técnica mantém o fator de arranjo isolado; com espaçamento de 1 λ, ele pode ter máximos nas extremidades.
+        Selecionar elemento isotrópico mostra somente esse fator, preservando projetos antigos.
+        O modelo não inclui terreno, torre, acoplamento ou descasamento. Não é ganho em dBi nem diagrama medido.
+        O pico do conjunto pode diferir do tilt da progressão. Lóbulos de grade remanescentes não são removidos.</p>
         <h2>Referências</h2><ul><li>Plan1 das duas planilhas fornecidas (D5, D7, D9, D11, D15 e D17).</li>
         <li>Catálogo ADT-PY / Rating / CableRating.xml.</li>
         <li><a href="https://www.analog.com/en/resources/analog-dialogue/articles/phased-array-antenna-patterns-part1.html">Analog Devices: fator de arranjo</a></li>
@@ -356,6 +368,7 @@ class MainWindow(QMainWindow):
         self.diagrams.invalidate()
         self.result_tabs.setEnabled(False)
         self.answer.setText('Clique em Calcular comprimentos para ver a orientação com os novos dados.')
+        self.rating_summary.setText('Potência do material: recalcule para atualizar a verificação.')
         for value in self.metrics.values():
             value.setText('—')
         self.warnings.hide()
@@ -461,7 +474,8 @@ class MainWindow(QMainWindow):
             if not self.override_vf.isChecked():
                 values['velocity_factor'] = cable.velocity_factor
         values['spacing_m'] = values.pop('spacing_mm') / 1000
-        return Design(**values, elements=self.elements.value(), speed_m_s=self.speed.currentData())
+        return Design(**values, elements=self.elements.value(), speed_m_s=self.speed.currentData(),
+                      element_pattern=self.element_pattern.currentData(), length_reference=self.length_reference.currentData())
 
     def input_payload(self, design):
         return dict(schema_version=1, design=asdict(design), kind=self.kind.currentData(),
@@ -473,6 +487,10 @@ class MainWindow(QMainWindow):
         try:
             design = self.read_design()
             result = calculate(design)
+            from .specification import line_specification
+            cable = self.db.cable(self.model.currentText()) if self.model.currentText() != CUSTOM else None
+            result = replace(result, line_specification=line_specification(
+                result, cable, self.model.currentText(), self.kind.currentData(), self.db.catalog_hash))
         except ValueError as exc:
             self.invalidate()
             # Domain validation can also identify an invalid value inside a closed panel.
@@ -518,8 +536,22 @@ class MainWindow(QMainWindow):
             self.answer.setText(f'Para inclinar {fmt(abs(d.tilt_deg), 2)}° para {direction}, os trechos ficam {length} '
                                 'conforme se sobe na torre. Use os comprimentos da tabela, já ajustados ao passo de corte.')
         self.length_title.setText('Comprimento de cada cabo' if self.kind.currentData() == 'cable' else 'Comprimento de cada linha')
-        fill_table(self.simple_table, [[f'E{e.number}', 'Inferior' if e.number == 1 else 'Superior' if e.number == d.elements else 'Intermediária',
-                                      fmt(e.length_m*1000, 3)] for e in r.elements])
+        shield = d.length_reference == 'shield_edges'
+        reference = ('Malha a malha' if self.kind.currentData() == 'cable' else 'Condutor externo') if shield else 'Planos de referência'
+        self.simple_table.setHorizontalHeaderLabels(['Antena', reference+'\n(mm)', 'Dif. anterior\n(mm)', 'Dif. E1\n(mm)'])
+        self.measure_note.setText(reference + ': diferença negativa = mais curto. E1 é a antena inferior. '
+                                 'Pontas expostas e conectores ficam fora da medida. Terminações devem ser iguais.' if shield else
+                                 'Referência elétrica de revisão antiga. Selecione malha a malha nos ajustes para uma nova especificação de montagem.')
+        fill_table(self.simple_table, [[f'E{e.number}', fmt(e.length_m*1000, 3), fmt(e.delta_previous_m*1000 if e.delta_previous_m is not None else None),
+                                      fmt(e.delta_e1_m*1000)] for e in r.elements])
+        spec = r.line_specification
+        loads = f'Cada ramal recebe {fmt(spec.branch_input_w, 1)} W'
+        if spec.common_input_w is not None:
+            loads += f'; linha comum recebe {fmt(spec.common_input_w, 1)} W'
+        self.rating_summary.setText(
+            f'Potência média máxima: {fmt(spec.average_power_w, 1)} W por trecho a {fmt(d.frequency_mhz, 2)} MHz (catálogo).\n'
+            f'{loads}. Verificação média: {spec.status}. Pico de catálogo: {fmt(spec.peak_power_w/1000, 1)} kW.'
+            if spec.average_power_w is not None else 'Potência máxima: não informada para este modelo personalizado.')
         fill_table(self.element_table, [[f'E{e.number}', fmt(e.height_m), fmt(e.ideal_length_m*1000),
                     fmt(e.length_m*1000), fmt(e.relative_phase_deg), fmt(e.phase_error_deg),
                     fmt(e.loss_db), fmt(e.power_w)] for e in r.elements])
@@ -532,9 +564,7 @@ class MainWindow(QMainWindow):
             curve_f.append(cable.samples[-1][0])
             self.attenuation_chart.set_data([('Interpolação do catálogo', curve_f, [cable.at(f)[0] for f in curve_f], BLUE)],
                                            'Frequência (MHz)', 'Atenuação (dB/100 m)', marker_x=d.frequency_mhz)
-            _, rating_kw = cable.at(d.frequency_mhz)
-            branch_input = d.input_power_w/d.elements * 10**(-(d.attenuation_db_100m*d.common_feeder_m/100)/10)
-            if branch_input > rating_kw*1000 or (d.common_feeder_m > 0 and d.input_power_w > rating_kw*1000):
+            if spec.status == 'excede referência':
                 warnings.append('Potência acima da referência média do catálogo em ao menos um trecho. Revise o dimensionamento térmico.')
             warnings.append('Potências de catálogo são referências; condições térmicas e de ROE não foram fornecidas.')
         else:
@@ -620,7 +650,7 @@ class MainWindow(QMainWindow):
             return
         try:
             project_id = self.db.save_project(self.project_name.text(), self.calculated_payload,
-                snapshot(self.result, self.model.currentText(), self.db.catalog_hash))
+                    snapshot(self.result, self.model.currentText(), self.db.catalog_hash, self.diagrams.view_range))
         except (ValueError, sqlite3.Error) as exc:
             self.error.setText(str(exc) if isinstance(exc, ValueError) else 'Não foi possível salvar no banco. Verifique espaço e permissão de escrita.')
             self.error.show()
@@ -639,6 +669,9 @@ class MainWindow(QMainWindow):
         try:
             project = self.db.project(int(self.project_table.item(row, 0).text()))
             self.restore_payload(project['payload'], project['title'])
+            bounds = project['snapshot'].get('diagram', {}).get('elevation_range_deg', [-90, 90])
+            if isinstance(bounds, list) and len(bounds) == 2:
+                self.diagrams.set_range(*bounds)
         except (ValueError, KeyError, TypeError, sqlite3.Error):
             QMessageBox.warning(self, 'Revisão não carregada', 'Dados da revisão inválidos ou incompatíveis com esta versão.')
 
@@ -661,6 +694,8 @@ class MainWindow(QMainWindow):
             self.channel.setValue(payload['channel'])
             self.ofdm_offset.setChecked(payload.get('ofdm_offset', False))
             self.elements.setValue(design.elements)
+            self.element_pattern.setCurrentIndex(self.element_pattern.findData(design.element_pattern))
+            self.length_reference.setCurrentIndex(self.length_reference.findData(design.length_reference))
             for key, value in asdict(design).items():
                 if key == 'spacing_m':
                     self.fields['spacing_mm'].setText(str(value*1000))
@@ -695,7 +730,7 @@ class MainWindow(QMainWindow):
                 export_csv(path, self.result, self.model.currentText())
             elif suffix == '.json':
                 export_json(path, {'title': self.project_name.text(), 'inputs': self.calculated_payload,
-                                  **snapshot(self.result, self.model.currentText(), self.db.catalog_hash)})
+                                  **snapshot(self.result, self.model.currentText(), self.db.catalog_hash, self.diagrams.view_range)})
             else:
                 self.write_pdf(path)
         except (OSError, ValueError):

@@ -7,7 +7,7 @@ Identidade visual: logo **EFTX ANTENNAS** fornecido pelo usuário.
 ## Executar no Windows
 
 - Ambiente preparado: abra **`iniciar.cmd`**.
-- Distribuição portátil 1.2: abra **`dist/1.2.0/EFTX_Tilt/EFTX_Tilt.exe`**. A pasta
+- Distribuição portátil 1.3: abra **`dist/1.3.0/EFTX_Tilt/EFTX_Tilt.exe`**. A pasta
   `_internal` deve permanecer junto ao executável; não é necessário instalar Python.
 - Instalação a partir do código (Python 3.11 ou superior):
 
@@ -35,6 +35,12 @@ Para definir outro banco:
 Clique em **Calcular comprimentos** (`Ctrl+Enter`). A tela mostra uma orientação
 em texto, o esquema das conexões, os comprimentos de E1 (inferior) até EN (superior)
 e a energia estimada que chega às antenas. Os valores iniciais são um exemplo.
+
+A tabela usa medidas **de malha a malha**, ao longo do cabo, entre extremidades
+da blindagem; para linhas rígidas, extremidades do condutor externo. Pontas
+expostas e conectores ficam fora da medida. As terminações são consideradas
+iguais em todos os ramais. As colunas mostram diferenças em relação ao anterior
+e a E1, **após arredondar** ao passo de corte; negativo significa mais curto.
 
 **Mostrar ajustes avançados** abre fator de velocidade, perdas, trecho comum,
 potência, passo de corte e referência de cálculo. Recolher mantém os valores;
@@ -68,6 +74,12 @@ o caso sem tilt (fases zeradas, mesmas amplitudes). Escolha dB ou campo relativo
 Mudar a faixa altera apenas a visualização; não recalcula comprimentos nem
 renormaliza os níveis. O gráfico indica lóbulos de grade e limitações de amostragem.
 
+O modelo inicial é **dipolo vertical de meia onda (aproximação)**: campo total =
+campo do elemento × fator de arranjo. Os nulos em ±90° resultam desse modelo.
+A subaba técnica permite conferir o fator de arranjo isolado, que pode ter máximos
+axiais com espaçamento de 1 λ. Outros lóbulos físicos permanecem visíveis.
+Projetos anteriores preservam a opção isotrópica até uma troca explícita.
+
 ## PDF e impressão
 
 **Imprimir…** (`Ctrl+P`) gera o PDF detalhado em
@@ -82,6 +94,10 @@ memória de cálculo, avisos, diagrama completo e faixa selecionada, esquema de
 montagem, versão e identificação do catálogo. Se a tela estiver na faixa completa,
 o PDF também inclui uma ampliação automática do tilt. A prévia e a impressão
 usam as páginas do PDF salvo, sem recalcular o projeto.
+
+Inclui a potência média máxima do material na frequência, limite de pico separado,
+entrada e margem dos ramais e da linha comum, amostras usadas na interpolação,
+tabelas de diferenças e desenhos cotados de **todos** os trechos (até 64).
 
 Entradas numéricas aceitam vírgula ou ponto decimal, sem separadores de milhar.
 Valores inválidos são rejeitados. Alterar uma entrada desativa os resultados
@@ -98,6 +114,13 @@ Interpolação **log-log**, por modelo e somente dentro da faixa disponível.
 Não se reproduz o comportamento legado de amostra mais próxima/global de frequência.
 O modo personalizado permite VF informado e atenuação opcional. Ausência de
 atenuação produz **n/d**, nunca eficiência fictícia de 100%.
+
+A potência média máxima exibida é a referência de catálogo na frequência informada.
+Não é substituída pela potência de pico. Temperatura, altitude, ROE e fatores de
+redução não constam do XML; conectores e divisor podem impor limites menores.
+O fator de crista não foi informado, portanto a condição de pico não é verificada.
+Limites, amostras, margens, comprimentos e modelo do diagrama são copiados para a
+revisão SQLite; alterações posteriores no catálogo não alteram a revisão salva.
 
 ## Engenharia
 
@@ -118,8 +141,8 @@ fixtures, origem dos dados e limites.
 
 **Eficiência de alimentação** é a fração de potência que chega aos elementos.
 Não inclui eficiência de radiação, ROE, acoplamento ou perdas não informadas.
-A coerência no alvo é calculada separadamente. O gráfico é fator de arranjo,
-não ganho em dBi nem diagrama de uma antena medida.
+A coerência no alvo é calculada separadamente. O gráfico principal inclui a
+aproximação analítica do elemento selecionado; não é ganho em dBi ou diagrama medido.
 
 ## Desenvolvimento e validação
 
@@ -145,6 +168,7 @@ inspeção das fontes XLS. A aplicação não executa macros ou instruções das
 ```text
 tilt/engineering.py    equações RF e validação, independentes de Qt
 tilt/storage.py        catálogo e revisões SQLite
+tilt/specification.py  limites de potência e evidência imutável do material
 tilt/window.py         bancada, catálogo, projetos e exportações
 tilt/workbench.py      fluxo simples e painéis avançados
 tilt/diagrams.py       diagramas verticais e faixa angular

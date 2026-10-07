@@ -11,9 +11,9 @@ from PySide6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QPushBu
 
 from . import __version__
 from .diagrams import pattern_series
-from .engineering import ENGINE_VERSION, vertical_patterns
+from .engineering import ENGINE_VERSION, ELEMENT_PATTERNS, vertical_patterns
 from .reports import fmt, report_html
-from .visuals import ArrayIllustration, LengthIllustration, SeriesChart
+from .visuals import ArrayIllustration, LengthIllustration, FabricationIllustration, SeriesChart
 
 ASSETS = Path(__file__).parent / 'assets'
 
@@ -51,6 +51,8 @@ def report_document(result, model, title, kind, catalog_hash, context=None, view
               f'<p class="note">Emitido em {generated} | Aplicativo {__version__} | Motor RF {ENGINE_VERSION}<br>'
               f'{material} | Entrada: {escape(frequency)}<br>{escape(mode)}</p>')
     html = html.replace('<body>', '<body>'+header)
+    html = html.replace('<h2>Material e capacidade de potência</h2>',
+                        '<h2 style="page-break-before:always">Material e capacidade de potência</h2>')
     html = html.replace('<h2>Comprimentos entre planos de referência</h2>',
                         '<h2 style="page-break-before:always">Comprimentos entre planos de referência</h2>')
     # Separate technical memory from long manufacturing tables, including N=64.
@@ -73,7 +75,8 @@ def report_document(result, model, title, kind, catalog_hash, context=None, view
         if data.sampling_limited:
             figures.append('<p>Resolução limitada: reduza a faixa para examinar picos e nulos estreitos.</p>')
     diagram_html = ('<h2 style="page-break-before:always">Diagramas verticais</h2>'
-                    '<p>Comparação: após o corte, comprimentos ideais e fases zeradas (sem tilt). '
+                    f'<p><b>{escape(ELEMENT_PATTERNS[result.design.element_pattern])}</b>.<br>'
+                    'Comparação: após o corte, comprimentos ideais e fases zeradas (sem tilt). '
                     'A linha vertical marca a inclinação solicitada.<br>'
                     f'{detail_caption}: {fmt(detail_range[0])}° a {fmt(detail_range[1])}°.</p>' + ''.join(figures) +
                     '<p class="note">Referência: soma coerente das amplitudes de cada curva. '
@@ -91,7 +94,18 @@ def report_document(result, model, title, kind, catalog_hash, context=None, view
                      '<p><img src="lengths" width="550" height="235"></p>'
                      '<p class="note">Confira o percurso físico, os planos dos conectores e a fase em bancada.</p>'
                      f'<p class="note">Catálogo SHA-256:<br>{escape(catalog_hash)}</p>')
-    document.setHtml(html.replace('</body>', diagram_html+assembly_html+'</body>'))
+    fabrication_html = ''
+    for offset in range(0, len(result.elements), 8):
+        elements = result.elements[offset:offset+8]
+        drawing = FabricationIllustration(result, kind, elements)
+        height = 85+80*len(elements)
+        name = f'fabrication-{offset}'
+        add_figure(document, name, drawing, 680, height)
+        fabrication_html += (f'<h2 style="page-break-before:always">Detalhes de cada trecho · E{elements[0].number} a E{elements[-1].number}</h2>'
+                             '<p>Extremidades tracejadas delimitam a medida. A sobra do condutor central é apenas ilustrativa; '
+                             'o preparo de cada conector deve seguir seu desenho de montagem. Diferença negativa = mais curto.</p>'
+                             f'<p><img src="{name}" width="550" height="{height*550//680}"></p>')
+    document.setHtml(html.replace('</body>', diagram_html+assembly_html+fabrication_html+'</body>'))
     return document
 
 

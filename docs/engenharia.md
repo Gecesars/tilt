@@ -126,7 +126,7 @@ Mudar c ou f altera λ e fase, mas não ΔL para d, VF e θ constantes.
 
 ## Espaçamento automático e compatibilidade
 
-O aplicativo 1.2 inicia com `d = λ₀ = c/f`, no espaço livre. A distância em mm
+O aplicativo inicia com `d = λ₀ = c/f`, no espaço livre. A distância em mm
 é atualizada ao trocar frequência, canal, deslocamento OFDM ou constante c.
 O fator de velocidade só entra em λg e nos comprimentos de alimentação.
 No modo automático, mudar a frequência também muda d e, portanto, ΔL.
@@ -141,7 +141,7 @@ espaçamentos de revisões anteriores e dos exemplos das planilhas.
 
 ## Diagramas verticais e precisão numérica
 
-O motor RF 1.1 mantém as equações e os casos das planilhas. Usa somas compensadas
+O motor RF 1.2 mantém as equações e os casos das planilhas. Usa somas compensadas
 (`math.fsum`) para potência e componentes de campo/coerência. A avaliação do
 diagrama aceita sequências ou iteradores de ângulos, rejeitando não finitos e
 elevações fora de −90° a +90°.
@@ -161,6 +161,62 @@ fase, coerência e progressão após corte são independentes dessa amostragem v
 O gráfico é exclusivamente vertical; o eixo é **elevação**, com zero no horizonte
 e ângulos negativos abaixo dele. O tilt positivo de entrada aparece em elevação
 negativa. A faixa é uma preferência de visualização e não modifica o projeto RF.
+
+Na aplicação 1.3 o padrão inicial é o dipolo vertical de meia onda (aproximação
+analítica, fio fino, espaço livre). Em elevação `e`, medida a partir do horizonte:
+
+```text
+F_elemento(e) = cos[(π/2) sin(e)] / cos(e)
+F_total(e) = F_elemento(e) × AF(e)
+F_elemento(±90°) = 0; F_elemento(0°) = 1
+```
+
+Próximo aos polos, usa-se a forma equivalente
+`sin[(π/2) cos²(e)/(1+|sin(e)|)]/cos(e)` para evitar cancelamento numérico.
+O valor zero físico é mostrado no piso de −60 dB. O padrão completo não é
+renormalizado ao pico amostrado: mantém o máximo do elemento igual a 1 e a soma
+coerente das amplitudes como referência. O pico pode diferir do tilt da progressão.
+A multiplicação não desloca os nulos do dipolo quando o tilt elétrico é aplicado.
+O fator de arranjo isotrópico continua disponível em uma subaba técnica; seus
+máximos em ±90° para d=λ e tilt zero não são erros de seno/cosseno.
+Não há supressão artificial de outros lóbulos. Base do elemento:
+[Antenna Theory, dipolo de meia onda](https://antenna-theory.com/antennas/halfwave.php).
+
+## Medida de fabricação e potência por trecho
+
+Novos projetos usam `length_reference=shield_edges`: comprimento ao longo do
+cabo entre extremidades da blindagem (malha a malha), ou condutor externo da
+linha rígida, excluindo pontas expostas e conectores. Atrasos das terminações
+são considerados iguais; conectores/transições desiguais exigem medição e
+compensação externa. Não é comprimento total do condutor central ou do conjunto
+com conectores. Guardam-se `Li − Li−1` e `Li − L1` após quantizar cada comprimento.
+
+`LineSpecification` é congelada no cálculo. Contém modelo, tipo, frequência,
+impedância, VF de catálogo, potência média interpolada, pico, tensão de pico,
+amostras de suporte `(MHz, dB/100m, kW)`, método, fonte e SHA-256. Exports e
+salvamento usam esse objeto, sem consultar novamente o catálogo.
+
+```text
+P_entrada_ramal = Pin/N × 10^[-α Lcomum / 1000]
+Margem_ramal = Pmédia_catálogo − P_entrada_ramal
+Margem_comum = Pmédia_catálogo − Pin  (se houver linha comum)
+Pin_máx = Pmédia_catálogo            (com linha comum do mesmo modelo)
+Pin_máx = N × Pmédia_catálogo        (sem linha comum)
+```
+
+Não se descontam perdas extras da verificação porque sua localização é
+desconhecida. O limite de entrada acima considera somente o material; divisor,
+conectores e condições da instalação não são certificados. `Avpower` e
+`PeakPower` vêm em kW e são convertidos para W. Pico não substitui limite médio;
+a condição de pico fica pendente sem fator de crista. O XML não informa condições
+de temperatura/altitude/ROE. Modelo personalizado sem rating fica indisponível.
+
+O snapshot JSON passa à versão 2, ainda no mesmo esquema SQLite (user_version=1):
+resultados, material, fabricação em mm e metadados do diagrama/faixa. As revisões
+continuam imutáveis. Payloads antigos sem `element_pattern` ou `length_reference`
+usam isotrópico e planos elétricos de referência, evitando reinterpretar medidas
+antigas como malha a malha. A UI informa essa condição e permite escolher o novo
+modelo antes de recalcular; o histórico não é reescrito.
 
 ## Relatório e impressão
 
@@ -183,8 +239,8 @@ Referências de implementação:
 
 ## Limites físicos
 
-- Padrão exibido: fator de arranjo de elementos isotrópicos, normalizado em dB de campo.
-- Sem ganho absoluto, diagrama individual, cobertura, terreno ou análise regulatória.
+- Padrão exibido: elemento analítico escolhido × fator de arranjo, em dB de campo.
+- Sem ganho absoluto, diagrama individual medido, cobertura, terreno ou análise regulatória.
 - Sem acoplamento, descasamento, dispersão medida, efeito da torre ou tolerância de VF.
 - Ramal mínimo escolhido pelo usuário; as ilustrações não verificam roteamento mecânico.
 - Linhas rígidas exigem modelagem/medição de descontinuidades e transições.

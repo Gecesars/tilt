@@ -3,6 +3,41 @@
 Ambiente: Windows 11 x64, Python 3.12.10, PySide6 6.11.2,
 SQLite da biblioteca padrão, PyInstaller 6.22.3.
 
+## Diagrama completo, fabricação e potência 1.3.0
+
+- **119 testes aprovados** em 07/10/2026. As duas referências XLS continuam
+  aprovadas; o padrão de elemento não altera os comprimentos de alimentação.
+- Produto de campo do dipolo vertical de meia onda pelo fator de arranjo
+  comparado com expressão independente em ângulos intermediários. Nulos em
+  ±90°, limite numérico próximo aos polos, largura de meia potência de cerca
+  de 78°, preservação de outros lóbulos e normalização independente do zoom.
+- Diferenças entre ramais consecutivos e em relação a E1 verificadas para tilt
+  positivo, negativo e zero, após arredondamento dos comprimentos.
+- Potência média exata/interpolada, pico separado, margens, modelo sem rating e
+  sobrecarga da linha comum com ramais abaixo do limite. Perdas extras não são
+  descontadas da verificação conservadora de capacidade.
+- Snapshot versão 2 no SQLite conserva material, amostras, limites, margens,
+  referência de medida, diferenças e modelo/faixa do diagrama. Modificar o
+  catálogo não altera resultados já calculados nem revisões salvas.
+- Revisão anterior sem os novos campos mantém padrão isotrópico e referência
+  elétrica antiga até escolha explícita. Reabertura recupera a faixa angular.
+- PDFs de cabo e linha rígida com 4 elementos: **7 páginas**, incluindo tabela
+  de potência e desenhos cotados de todos os ramais. Caso de 64 elementos:
+  **18 páginas**, E1–E64 nas tabelas e 8 grupos de desenhos. Páginas renderizadas
+  com Poppler e inspecionadas visualmente, incluindo repetição de cabeçalhos.
+- Executável `dist/1.3.0/EFTX_Tilt/EFTX_Tilt.exe` testado em Qt offscreen e
+  Windows nativo: código 0, geração de PDF e abertura da prévia. pypdf confirmou
+  versão, potência de 1519,819 W em 623 MHz para LCF12-50, pico de 38000 W,
+  comprimentos/diferenças e modelo analítico. Bancos de diagnóstico com 47
+  modelos e 1669 amostras.
+- ZIP portátil verificado por CRC: 216 arquivos; Qt6Pdf incluído. `compileall`
+  e `git diff --check` executados. Nenhuma página enviada a impressora física.
+
+Limites: modelo de dipolo é aproximação analítica; nenhum diagrama medido foi
+fornecido. Malha a malha considera extremidades da blindagem e terminações
+iguais. Potência de catálogo não certifica condições térmicas/ROE, conectores,
+divisor ou picos de um sinal cujo fator de crista não foi informado.
+
 ## Cálculos, diagramas e impressão 1.2.0
 
 - **104 testes aprovados**. Mantida a paridade com as duas planilhas; acrescida

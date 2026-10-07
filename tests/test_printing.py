@@ -18,11 +18,15 @@ def test_detailed_pdf_has_inputs_results_figures_selected_range_and_traceability
     path = window.write_pdf(tmp_path/'report.pdf')
     doc = printing.load_pdf(path)
     try:
-        assert doc.pageCount() == 5
+        assert doc.pageCount() == 7
         text = pdf_text(doc)
         for phrase in ['Teste <&> RF', '623,000', '481,541', 'E1', 'E4', 'Memória de cálculo',
-                       'Diagramas verticais', '-12,000° a 8,000°', 'Esquema de alimentação', '1.2.0', window.db.catalog_hash]:
+                       'Diagramas verticais', '-12,000° a 8,000°', 'Esquema de alimentação', window.db.catalog_hash,
+                       'Malha a malha', 'Potência média máxima', 'Potência de pico', 'Dif. anterior', 'Dif. E1',
+                       'Dipolo vertical de meia onda', 'Detalhes de cada trecho']:
             assert phrase in text
+        for value in ['1519,819', '38000,000', '3044,400', '-14,800', '-44,400']:
+            assert value in text  # Default 623 MHz LCF12-50 rating and actual rounded fabrication.
         assert doc.pagePointSize(0).width() == pytest.approx(595, abs=1)
         assert not doc.render(3, QSize(600, 850)).isNull()
     finally:
@@ -38,7 +42,7 @@ def test_long_pdf_contains_every_element_and_unknown_efficiency(window, tmp_path
     doc = printing.load_pdf(path)
     try:
         text = pdf_text(doc)
-        assert 6 <= doc.pageCount() <= 10
+        assert 15 <= doc.pageCount() <= 22  # Eight fabrication drawings, plus long tables and calculation.
         for n in range(1, 65):
             assert f'E{n}' in text
         assert 'n/d' in text
@@ -100,7 +104,7 @@ def test_preview_without_printer_retains_pdf_and_disables_submission(window, tmp
     monkeypatch.setattr(QPrinterInfo, 'availablePrinterNames', lambda: [])
     preview = printing.PrintPreview(path, window)
     assert not preview.print_button.isEnabled()
-    assert preview.document.pageCount() == 5
+    assert preview.document.pageCount() == 7
     assert path.is_file()
     preview.document.close()
     preview.close()
