@@ -11,6 +11,7 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from tilt import __version__
+from tools.windows_package import excluded_windows_dll
 
 NS = 'http://wixtoolset.org/schemas/v4/wxs'
 COMPONENT_NAMESPACE = uuid.UUID('99dce0e3-0ed2-485f-8d4f-1aef9de9b7d0')
@@ -43,7 +44,7 @@ def create_fragment(payload, output):
     for path in files:
         if path.is_symlink() or not path.resolve().is_relative_to(payload):
             raise ValueError('Arquivo fora do payload: '+str(path))
-        if path.name.casefold() in {'qt6virtualkeyboard.dll', 'qtvirtualkeyboardplugin.dll', '.env'} or '.sqlite' in path.name.casefold():
+        if excluded_windows_dll(path.name) or path.name.casefold() == '.env' or '.sqlite' in path.name.casefold():
             raise ValueError('Arquivo não distribuível no payload: '+str(path))
     ET.register_namespace('', NS)
     root = ET.Element(f'{{{NS}}}Wix')

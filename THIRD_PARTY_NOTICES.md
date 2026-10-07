@@ -1,4 +1,4 @@
-# Componentes de terceiros — EFTX Tilt 1.3.0
+# Componentes de terceiros — EFTX Tilt 1.3.1
 
 A licença proprietária EFTX cobre apenas os componentes próprios. Os componentes
 abaixo conservam suas licenças e direitos originais. Os textos e avisos estão em
@@ -12,7 +12,7 @@ compartilhadas estão em `licenses/SOURCES.md`.
 | Qt PDF / PDFium | Qt 6.11.2 | LGPL-3.0 para Qt PDF; BSD e avisos incorporados do PDFium |
 | PyInstaller, bootloader | 6.22.3 | GPL-2.0-or-later com exceção de distribuição do bootloader |
 | SQLite | versão incluída no Python | domínio público, conforme o projeto SQLite |
-| OpenSSL | 3.0.16 (Python) / 3.6.4 (Qt) | Apache-2.0 e avisos incorporados |
+| OpenSSL | 3.0.16 (Python) | Apache-2.0 e avisos incorporados |
 | Microsoft Visual C++ Runtime | DLLs incluídas no Python/Qt | termos de redistribuição Microsoft |
 | WiX UI, suporte do instalador | 5.0.2 | MS-RL; termos próprios não se transferem ao aplicativo |
 
@@ -26,6 +26,10 @@ utilizado nem distribuído. As DLLs e extensões `.pyd` ficam separadas do execu
 em `_internal/`; não há verificação de assinatura que impeça sua substituição por
 bibliotecas modificadas compatíveis. Uma reparação manual do MSI restaura os
 arquivos originais; guarde suas modificações antes de solicitar reparação.
+
+O backend OpenSSL opcional do Qt não é distribuído; permanece o backend Schannel
+do Windows. Avisos de OpenSSL 3.6.4 são mantidos como registro da distribuição
+1.3.0, mas suas DLLs externas não integram a distribuição 1.3.1.
 
 O catálogo `CableRating.xml` foi fornecido a partir do ADT-PY pelo responsável
 pelo projeto. Sua origem e hash estão preservados em `tilt/data/cables.json`;

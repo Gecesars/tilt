@@ -3,6 +3,40 @@
 Ambiente: Windows 11 x64, Python 3.12.10, PySide6 6.11.2,
 SQLite da biblioteca padrão, PyInstaller 6.22.3.
 
+## Compatibilidade Windows 10 — revisão 1.3.1
+
+- **141 testes aprovados** em 07/10/2026. Incluem os limites Windows 10 1809,
+  21H2, 22H2 e Windows 11, rejeição de builds anteriores/processo de 32 bits,
+  bloqueio antes da importação do Qt e filtragem de DLLs externas.
+- Plataforma de destino: Windows 10 1809+ x64 / Windows 11 x64, conforme
+  [fontes e política de compatibilidade](windows_compatibilidade.md). Ambiente
+  de execução disponível: **Windows 11 x64, build 26300**.
+- Auditoria de **62 arquivos PE**: arquitetura AMD64 e versão de subsistema
+  compatível com Windows 10. Manifesto do EXE inclui o identificador Windows 10.
+  Runtime MSVC, Qt PDF, plugin Windows e backend Schannel presentes. Ausentes
+  cópias externas de UCRT, API-set forwarders, ICU e backend OpenSSL opcional Qt.
+- Condição compilada do MSI avaliada pelo próprio Windows Installer com sete
+  conjuntos de propriedades: bloqueia 8.1/10 1803 e 32 bits, aceita 10 1809,
+  10 22H2 e 11, e permite manutenção de produto existente. Esses são testes
+  de condição com valores simulados, não execução em cada sistema operacional.
+- MSI compilado com WiX 5.0.2 e validação ICE. Instalação nova, reparação e
+  desinstalação retornaram **0**, com 236 arquivos conferidos por SHA-256.
+- Atualização real local **MSI 1.3.0 → 1.3.1** retornou **0**, manteve o caminho
+  personalizado sem repassá-lo na linha de comando, retirou a versão anterior e
+  as DLLs obsoletas, preservou arquivo adicional e o hash do SQLite real.
+  Reparação e desinstalação após atualização também retornaram **0**.
+- Executável instalado após atualização: Qt offscreen e Windows nativo com
+  código **0**, PDF de sete páginas e prévia. pypdf confirmou versão 1.3.1,
+  LCF12-50, potência média/pico, malha a malha e dipolo. Os bancos de diagnóstico
+  têm integridade `ok`, 47 modelos e 1669 amostras.
+- ZIP final: 236 arquivos, CRC e SHA-256 conferidos com o payload MSI.
+  `compileall` e `git diff --check` executados.
+
+**Não executado:** aplicativo/instalador em Windows 10 real ou VM Windows 10,
+máquina limpa adicional, Windows de 32 bits, Windows ARM e impressão física.
+O requisito e os testes de propriedades não constituem homologação Windows 10.
+Executável e MSI continuam sem assinatura digital de editor.
+
 ## Instalador e distribuição 1.3.0
 
 - **127 testes aprovados**, incluindo validação de componentes WiX, inventário,

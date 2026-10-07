@@ -6,6 +6,9 @@ Identidade visual: logo **EFTX ANTENNAS** fornecido pelo usuário.
 
 ## Executar no Windows
 
+- Requisito: **Windows 10 versão 1809 ou posterior, 64 bits (x64)**, ou Windows
+  11 x64. Inclui Windows 10 22H2 e LTSC 2019/2021. Consulte a
+  [compatibilidade e seus limites de validação](docs/windows_compatibilidade.md).
 - Ambiente preparado: abra **`iniciar.cmd`**.
 - Baixe o **MSI para Windows x64** em [Releases](https://github.com/Gecesars/tilt/releases).
   Leia e aceite a licença, escolha a pasta e conclua. O programa cria atalhos no

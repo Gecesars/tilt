@@ -1,4 +1,4 @@
-param([string]$Version = '1.3.0')
+param([string]$Version = '1.3.1', [string]$UpgradeFrom = '')
 $ErrorActionPreference = 'Stop'
 $tiltRoot = Split-Path -Parent $PSScriptRoot
 $tiltMsi = Join-Path $tiltRoot "dist\EFTX_Tilt-$Version-Windows-x64.msi"
@@ -14,6 +14,16 @@ $tiltView.Execute()
 $tiltProduct = $tiltView.Fetch().StringData(1)
 $tiltView.Close()
 if ($tiltInstaller.ProductState($tiltProduct) -ne -1) { throw 'Produto já registrado. Teste deve começar sem esta instalação MSI.' }
+$tiltOldProduct = $null
+if ($UpgradeFrom) {
+    $tiltOldMsi = Join-Path $tiltRoot "dist\EFTX_Tilt-$UpgradeFrom-Windows-x64.msi"
+    $tiltOldDb = $tiltInstaller.OpenDatabase($tiltOldMsi, 0)
+    $tiltOldView = $tiltOldDb.OpenView('SELECT `Value` FROM `Property` WHERE `Property` = ''ProductCode''')
+    $tiltOldView.Execute()
+    $tiltOldProduct = $tiltOldView.Fetch().StringData(1)
+    $tiltOldView.Close()
+    if ($tiltOldProduct -eq $tiltProduct -or $tiltInstaller.ProductState($tiltOldProduct) -ne -1) { throw 'Versao anterior invalida ou ja instalada.' }
+}
 foreach ($tiltShortcut in @(
     "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\EFTX\EFTX Tilt.lnk",
     "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\EFTX\Licen$([char]0x00e7)a EFTX Tilt.lnk",
@@ -45,8 +55,25 @@ try {
     $tiltResults.license_rejection = Invoke-Msi '/i' $tiltMsi "INSTALLFOLDER=`"$tiltInstall`"" 'license-rejected.log'
     if ($tiltResults.license_rejection -ne 1603 -or (Test-Path -LiteralPath "$tiltInstall\EFTX_Tilt.exe")) { throw 'Instalação sem aceite não foi bloqueada.' }
     if (-not (Select-String -LiteralPath "$tiltRun\license-rejected.log" -Pattern 'EFTX_ACCEPT_LICENSE=1' -Quiet)) { throw 'Falha não identificada como falta de aceite.' }
-    $tiltResults.install = Invoke-Msi '/i' $tiltMsi "EFTX_ACCEPT_LICENSE=1 INSTALLFOLDER=`"$tiltInstall`"" 'install.log'
+    $tiltInstallExtra = "EFTX_ACCEPT_LICENSE=1 INSTALLFOLDER=`"$tiltInstall`""
+    if ($UpgradeFrom) {
+        $tiltResults.upgrade_from = $UpgradeFrom
+        $tiltResults.install_previous = Invoke-Msi '/i' $tiltOldMsi $tiltInstallExtra 'install-previous.log'
+        if ($tiltResults.install_previous -notin @(0,3010)) { throw 'Falha ao instalar versao anterior.' }
+        'user-owned fixture' | Set-Content -LiteralPath "$tiltInstall\user-added.txt"
+        # Exercise remembered custom location; no INSTALLFOLDER on upgrade.
+        $tiltInstallExtra = 'EFTX_ACCEPT_LICENSE=1'
+    }
+    $tiltResults.install = Invoke-Msi '/i' $tiltMsi $tiltInstallExtra 'install.log'
     if ($tiltResults.install -notin @(0,3010)) { throw "Falha de instalação: $($tiltResults.install)" }
+    if ($UpgradeFrom) {
+        if ($tiltInstaller.ProductState($tiltOldProduct) -ne -1) { throw 'Versao anterior ainda registrada.' }
+        if ((Get-Content -LiteralPath "$tiltInstall\user-added.txt" -Raw).Trim() -ne 'user-owned fixture') { throw 'Arquivo extra perdido no upgrade.' }
+        foreach ($tiltObsolete in @('ucrtbase.dll','api-ms-win-core-file-l1-1-0.dll','libssl-3-x64.dll')) {
+            if (Test-Path -LiteralPath "$tiltInstall\_internal\$tiltObsolete") { throw "DLL obsoleta preservada: $tiltObsolete" }
+        }
+        $tiltResults.upgrade_preserved_custom_path_and_extra_file = $true
+    }
     foreach ($tiltItem in $tiltManifest.files) {
         $tiltFile = Join-Path $tiltInstall $tiltItem.path
         if ((Get-FileHash -LiteralPath $tiltFile -Algorithm SHA256).Hash -ne $tiltItem.sha256) { throw "Hash instalado divergente: $tiltFile" }
@@ -71,6 +98,11 @@ try {
         $tiltRegisteredPath = (Get-ItemProperty 'HKCU:\Software\EFTX\Tilt').InstallLocation
         if ($tiltRegisteredPath.TrimEnd('\') -ne $tiltInstall) { throw 'Local registrado mudou; desinstalação automática cancelada.' }
         $tiltResults.uninstall = Invoke-Msi '/x' $tiltProduct '' 'uninstall.log'
+    }
+    if ($tiltOldProduct -and $tiltInstaller.ProductState($tiltOldProduct) -eq 5) {
+        $tiltRegisteredPath = (Get-ItemProperty 'HKCU:\Software\EFTX\Tilt').InstallLocation
+        if ($tiltRegisteredPath.TrimEnd('\') -ne $tiltInstall) { throw 'Local da versao anterior mudou; limpeza cancelada.' }
+        $tiltResults.uninstall_previous = Invoke-Msi '/x' $tiltOldProduct '' 'uninstall-previous.log'
     }
     $tiltResults.finished_utc = [DateTime]::UtcNow.ToString('o')
     $tiltResults | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath "$tiltRun\results.json" -Encoding UTF8

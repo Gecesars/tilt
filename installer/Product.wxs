@@ -7,7 +7,13 @@
     <MajorUpgrade DowngradeErrorMessage="Uma versão mais recente do EFTX Tilt já está instalada."
                   Schedule="afterInstallInitialize" />
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
-    <Launch Condition="VersionNT64" Message="Este instalador requer Windows de 64 bits." />
+    <Property Id="EFTX_WINDOWS_BUILD">
+      <RegistrySearch Id="WindowsBuild" Root="HKLM"
+                      Key="SOFTWARE\Microsoft\Windows NT\CurrentVersion"
+                      Name="CurrentBuildNumber" Type="raw" Bitness="always64" />
+    </Property>
+    <Launch Condition="Installed OR (VersionNT64 AND EFTX_WINDOWS_BUILD &gt;= 17763)"
+            Message="O EFTX Tilt requer Windows 10 versão 1809 ou posterior (64 bits), ou Windows 11 (64 bits)." />
     <Launch Condition="Installed OR UILevel &gt;= 5 OR EFTX_ACCEPT_LICENSE = &quot;1&quot;"
             Message="Leia LICENSE.txt. Para instalação silenciosa autorizada, informe EFTX_ACCEPT_LICENSE=1." />
     <Property Id="EFTX_ACCEPT_LICENSE" Secure="yes" />

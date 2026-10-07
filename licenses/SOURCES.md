@@ -1,6 +1,6 @@
 # Fontes e substituição de bibliotecas
 
-Distribuição: EFTX Tilt 1.3.0 para Windows x64. Bibliotecas não modificadas.
+Distribuição: EFTX Tilt 1.3.1 para Windows 10 1809+ / Windows 11 x64. Bibliotecas não modificadas.
 Consulta às fontes oficiais: 7 de outubro de 2026.
 
 ## Fontes correspondentes
@@ -13,7 +13,7 @@ componentes incorporados, inclusive PDFium e bibliotecas de formatos de imagem.
 - [PySide6 e Shiboken6 6.11.2, código e scripts de construção](https://download.qt.io/official_releases/QtForPython/pyside6/PySide6-6.11.2-src/pyside-setup-everywhere-src-6.11.2.tar.xz).
 - [Python 3.12.10](https://www.python.org/ftp/python/3.12.10/Python-3.12.10.tar.xz).
 - [OpenSSL 3.0.16, utilizado pelo Python](https://github.com/openssl/openssl/tree/openssl-3.0.16).
-- [OpenSSL 3.6.4, bibliotecas TLS incluídas com Qt](https://github.com/openssl/openssl/tree/openssl-3.6.4).
+- [OpenSSL 3.6.4, referência histórica do pacote 1.3.0; DLLs excluídas de 1.3.1](https://github.com/openssl/openssl/tree/openssl-3.6.4).
 - [PyInstaller 6.22.3, incluindo bootloader](https://github.com/pyinstaller/pyinstaller/tree/v6.22.3).
 - [WiX Toolset 5.0.2, incluindo biblioteca de diálogos](https://github.com/wixtoolset/wix/tree/v5.0.2).
 - [SQLite: código e domínio público](https://sqlite.org/copyright.html).

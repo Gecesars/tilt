@@ -31,7 +31,8 @@ def test_payload_inventory_and_component_identity_survive_version_changes(tmp_pa
     assert not tree.findall('.//w:RemoveFile', ns)
 
 
-@pytest.mark.parametrize('name', ['tilt.sqlite3','tilt.sqlite3-wal','.env','Qt6VirtualKeyboard.dll','qtvirtualkeyboardplugin.dll'])
+@pytest.mark.parametrize('name', ['tilt.sqlite3','tilt.sqlite3-wal','.env','Qt6VirtualKeyboard.dll',
+                                'qtvirtualkeyboardplugin.dll','ucrtbase.dll','api-ms-win-core-file-l1-1-0.dll'])
 def test_payload_rejects_private_data_and_unused_gpl_plugin(tmp_path, name):
     (tmp_path/'EFTX_Tilt.exe').write_bytes(b'exe')
     (tmp_path/name).write_bytes(b'must not ship')

@@ -3,9 +3,16 @@
 ## Usuário final
 
 Em [Releases](https://github.com/Gecesars/tilt/releases), baixe
-`EFTX_Tilt-1.3.0-Windows-x64.msi`. O assistente em português apresenta os termos
+`EFTX_Tilt-1.3.1-Windows-x64.msi`. O assistente em português apresenta os termos
 EFTX e solicita aceite. Uso permitido somente para EFTX e pessoas/organizações
 autorizadas por escrito, conforme `LICENSE.txt`.
+
+Requer **Windows 10 1809 ou posterior (build 17763+), 64 bits x64**, ou Windows
+11 x64. Windows 10 22H2 e LTSC 2019/2021 atendem ao requisito. Não há pacote de
+32 bits. Python, Qt e runtime Visual C++ necessários estão incluídos; .NET e
+WiX são ferramentas de compilação e não são necessários no computador do usuário.
+Leia [compatibilidade Windows](windows_compatibilidade.md) para a base técnica e
+o estado da validação em cada sistema.
 
 Instalação por usuário, sem serviço ou tarefa agendada. Pasta padrão:
 `%LOCALAPPDATA%\Programs\EFTX\Tilt`. Atalhos: menu Iniciar, área de trabalho e
@@ -17,7 +24,7 @@ Arquivos extras que você colocar na pasta do programa não são removidos.
 Após ler os termos e obter autorização, instalação silenciosa:
 
 ```powershell
-msiexec /i EFTX_Tilt-1.3.0-Windows-x64.msi /qn /norestart EFTX_ACCEPT_LICENSE=1
+msiexec /i EFTX_Tilt-1.3.1-Windows-x64.msi /qn /norestart EFTX_ACCEPT_LICENSE=1
 ```
 
 Sem essa propriedade, instalações com interface reduzida ou silenciosas são
@@ -35,7 +42,7 @@ release. O hash verifica integridade; não substitui assinatura digital de edito
 O MSI e o executável desta versão não estão assinados.
 
 ```powershell
-Get-FileHash .\EFTX_Tilt-1.3.0-Windows-x64.msi -Algorithm SHA256
+Get-FileHash .\EFTX_Tilt-1.3.1-Windows-x64.msi -Algorithm SHA256
 ```
 
 ## Manutenção
@@ -52,9 +59,9 @@ powershell -ExecutionPolicy Bypass -File .\instalar.ps1
 powershell -ExecutionPolicy Bypass -File .\build_installer.ps1
 ```
 
-O script cria o aplicativo em `dist/release/1.3.0/EFTX_Tilt`, prepara licença RTF,
+O script cria o aplicativo em `dist/release/1.3.1/EFTX_Tilt`, prepara licença RTF,
 imagens derivadas do logo aprovado, inventário SHA-256 e componentes WiX em
-`build/installer/1.3.0`, e gera o MSI em `dist/`. Para alterar somente o instalador
+`build/installer/1.3.1`, e gera o MSI em `dist/`. Para alterar somente o instalador
 com o payload já existente, use `-SkipApplicationBuild`. A invocação direta da
 DLL restaurada do WiX evita a perda de argumentos `-d` observada no dispatcher
 de ferramentas do SDK .NET 10. A validação ICE permanece habilitada.
@@ -74,6 +81,7 @@ restringe apenas componentes próprios EFTX.
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q
 powershell -ExecutionPolicy Bypass -File .\tools\test_installer.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\test_installer.ps1 -UpgradeFrom 1.3.0
 git diff --check
 ```
 
@@ -83,6 +91,8 @@ de `.artifacts/`, confere hashes, executa o aplicativo e a prévia PDF em Qt
 offscreen/Windows, remove um arquivo próprio para testar reparação e desinstala
 somente o ProductCode testado. Confere que os dados e atalhos preexistentes na
 pasta EFTX não mudaram. Logs, PDFs, bancos de teste e resultados ficam nessa pasta.
+Com `-UpgradeFrom`, requer o MSI anterior em `dist/` e verifica atualização,
+preservação do caminho escolhido e remoção das DLLs obsoletas.
 
 Execute `.\.venv\Scripts\python.exe tools/package_release.py` para criar o ZIP
 a partir do mesmo payload do MSI, conferir CRC e hashes e gerar `SHA256SUMS.txt`.

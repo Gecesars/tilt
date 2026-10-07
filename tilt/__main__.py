@@ -4,14 +4,17 @@ from pathlib import Path
 import sqlite3
 import sys
 
-from PySide6.QtCore import QStandardPaths, QTimer
-from PySide6.QtWidgets import QApplication, QMessageBox
-
-from .storage import Database
-from .window import MainWindow
+from .platform_support import require_supported_windows
 
 
 def main():
+    if not require_supported_windows():
+        return 1
+    from PySide6.QtCore import QStandardPaths, QTimer
+    from PySide6.QtWidgets import QApplication, QMessageBox
+    from .storage import Database
+    from .window import MainWindow
+
     parser = argparse.ArgumentParser(description='EFTX Tilt elétrico')
     parser.add_argument('--database', type=Path, help='Banco SQLite alternativo para bancada/teste')
     parser.add_argument('--smoke-test', action='store_true', help='Abre e encerra após a primeira renderização')
