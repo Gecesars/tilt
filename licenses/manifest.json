@@ -1,0 +1,345 @@
+{
+  "retrieved_at_utc": "2026-10-07T17:40:28.997407+00:00",
+  "notices": [
+    {
+      "file": "qt-attributions/qtcore-attribution-blake2.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtcore-attribution-blake2.html",
+      "sha256": "58a1dd837d722f2e777ec50f3eb53764e42da55117e7659a139df9209e1f0303"
+    },
+    {
+      "file": "qt-attributions/qtcore-attribution-doubleconversion.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtcore-attribution-doubleconversion.html",
+      "sha256": "e5cf988bae229744a1b0c2eb5343b57c223be21cdaf8d96f5da8871be2da846c"
+    },
+    {
+      "file": "qt-attributions/qtcore-attribution-easing.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtcore-attribution-easing.html",
+      "sha256": "b016d8bfbe1c618bacd0747218dd046d28456283533c0fd12650932af7202208"
+    },
+    {
+      "file": "qt-attributions/qtcore-attribution-forkfd.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtcore-attribution-forkfd.html",
+      "sha256": "0fa63d223c7aeaba0306791d3abffe6175c630fc8294396742f82eae0dbd59c7"
+    },
+    {
+      "file": "qt-attributions/qtcore-attribution-md4.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtcore-attribution-md4.html",
+      "sha256": "b5cde1343c9a121824506b66371a28c020efb7da0106c36070eb4fa195de7238"
+    },
+    {
+      "file": "qt-attributions/qtcore-attribution-md5.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtcore-attribution-md5.html",
+      "sha256": "3398b182c5bc347b34c24729d6e459030a0db8d8213555ff3d42be64f627e4ac"
+    },
+    {
+      "file": "qt-attributions/qtcore-attribution-pcre2-sljit.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtcore-attribution-pcre2-sljit.html",
+      "sha256": "daf512f8ad965bdcc3cfbe74c35054baabd9d8c710afd324c27f709d7dc150b9"
+    },
+    {
+      "file": "qt-attributions/qtcore-attribution-pcre2.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtcore-attribution-pcre2.html",
+      "sha256": "2c4acd2c21efd77ae0eecca80bf6856955663e4901822953ede1933daa7db928"
+    },
+    {
+      "file": "qt-attributions/qtcore-attribution-qeventdispatcher-cf.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtcore-attribution-qeventdispatcher-cf.html",
+      "sha256": "1269c21a90af64a4e3b2b5ac060a5e251e38d837c52469ebb15217b3ea203364"
+    },
+    {
+      "file": "qt-attributions/qtcore-attribution-rfc6234.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtcore-attribution-rfc6234.html",
+      "sha256": "497e6bebfa44f5d4496d8a7cceb407d4358bd514968b5ed1a80cee5159171091"
+    },
+    {
+      "file": "qt-attributions/qtcore-attribution-sha1.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtcore-attribution-sha1.html",
+      "sha256": "257d525f84decba8654877b3f6906a363e65289128e1bbeab3209a7e509e48ec"
+    },
+    {
+      "file": "qt-attributions/qtcore-attribution-sha3-endian.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtcore-attribution-sha3-endian.html",
+      "sha256": "2ec6497c16dbb10cc9e0c4be956993ccfe5cfc33b99b5c3bf2bcdfcabeb16640"
+    },
+    {
+      "file": "qt-attributions/qtcore-attribution-sha3-keccak.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtcore-attribution-sha3-keccak.html",
+      "sha256": "dbe6f2a9ecfffbaccc43a1c748389daf94e78f56f7aa70ee0f1b395d2a14730e"
+    },
+    {
+      "file": "qt-attributions/qtcore-attribution-siphash.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtcore-attribution-siphash.html",
+      "sha256": "a40c91bb35059950989110425c02f3f1c3fe812c7d70ba4aa973df719315b0c2"
+    },
+    {
+      "file": "qt-attributions/qtcore-attribution-tika-mimetypes.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtcore-attribution-tika-mimetypes.html",
+      "sha256": "fbf41b6f5cef094f7912ef243e2b79e2e7a36df73dc109aeb3c47a56688df915"
+    },
+    {
+      "file": "qt-attributions/qtcore-attribution-tinycbor.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtcore-attribution-tinycbor.html",
+      "sha256": "86f68c472bdf94233b89138d242a06b0ad4a7bbefe6a47968ddfa5881366d8cf"
+    },
+    {
+      "file": "qt-attributions/qtcore-attribution-tlexpected.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtcore-attribution-tlexpected.html",
+      "sha256": "eca8a1653411e319f21d9861405b9a14065235cee97a4f11b33d92218c801adc"
+    },
+    {
+      "file": "qt-attributions/qtcore-attribution-unicode-character-database.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtcore-attribution-unicode-character-database.html",
+      "sha256": "737c2be08e79806ba41d099f18dd62c97c6beca34b2deaafbbe1327ce4b84aa1"
+    },
+    {
+      "file": "qt-attributions/qtcore-attribution-unicode-cldr.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtcore-attribution-unicode-cldr.html",
+      "sha256": "9fa06dc9ea80f733fdad31fbeaf6db0501f70181144181a4a760353a9cf1b2ec"
+    },
+    {
+      "file": "qt-attributions/qtcore-attribution-zlib.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtcore-attribution-zlib.html",
+      "sha256": "dfeacd69520287a84deecea426bac318e6e0be7f2742238e338f4a5195f433fe"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-aglfn.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-aglfn.html",
+      "sha256": "130cae789dd8b75e97aabb36c6043862653c38258b9eaa4ff15e542d097c2b14"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-android-native-style.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-android-native-style.html",
+      "sha256": "97b61befe6f3f4ac1cde290f150a48f997f7c94a40f433a21d2be24598f5eb96"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-cocoa-platform-plugin.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-cocoa-platform-plugin.html",
+      "sha256": "aeceb545936af1a4a747cda3bb16d34c5916b39e75aed3ce4178e4df0e80571a"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-d3d12memoryallocator.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-d3d12memoryallocator.html",
+      "sha256": "8a4220085c4f97c1299baf77132a3c562a511b37e3497c8920519dde863ec361"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-dejayvu.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-dejayvu.html",
+      "sha256": "cc4ee78ea2e8d68749b96e6208ba6cbbda5807bd7b3c8b2ee1778aaf7e64cc75"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-emoji-segmenter.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-emoji-segmenter.html",
+      "sha256": "e8bc1cf5e5fe1d69f2c3b416d8320ecd90d1d6c22e24bbf383550a9fc6aeb8d0"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-freetype-bdf.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-freetype-bdf.html",
+      "sha256": "b0c59c7a56c55bdb7fd9c932b0b491193fbf48383783b83172c1e220acfebea7"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-freetype-pcf.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-freetype-pcf.html",
+      "sha256": "73a93da27050f59282a3b5393de48fe557c221242c3c4cf9a7b576c6c3d6449b"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-freetype-zlib.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-freetype-zlib.html",
+      "sha256": "fe22d15ed3acf422b987c274737c6f4abf798ad6dc7f40248383ceca1353a126"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-freetype.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-freetype.html",
+      "sha256": "4fdc42840eccf69a1002ab4514f9f4faa3be8c83d80d3f48292a9a848533992e"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-grayraster.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-grayraster.html",
+      "sha256": "18c190d04f58f723661eb36d8f23a7378ca80d4d5474c3966989f2500431c95b"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-harfbuzz-ng.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-harfbuzz-ng.html",
+      "sha256": "7c6903835c848b55e7d915d74dfe2f22d661fd1f77c41935ff13fa91611cc487"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-icc-srgb-color-profile.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-icc-srgb-color-profile.html",
+      "sha256": "5f5995ac071dc147585f7d35bb14ff54826fc44f087bc29ac7c3abc6152c18b8"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-libjpeg.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-libjpeg.html",
+      "sha256": "8e604047e8d243f2f64da175da78c8dfebdeca160d7f80079ed5d3c47cd51739"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-libpng.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-libpng.html",
+      "sha256": "cd471e0f1255d4e10291eb6b93ed0c841569eb7c7dad83918b468a499f0eb944"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-md4c.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-md4c.html",
+      "sha256": "6131a22d599473be6fc71d7e6d40a57388fdc731f46c83dc0327b2034918e318"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-opengl-es2-headers.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-opengl-es2-headers.html",
+      "sha256": "30f162635bd909b4c3171f9901c3676425cab370e4f7e996a73d7ed6edc8c1ea"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-opengl-headers.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-opengl-headers.html",
+      "sha256": "b384528dbea8369559cd105c4c9b346a050dec5413ea5bf11ecd87cd43f91dd9"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-pixman.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-pixman.html",
+      "sha256": "d7dae954e6965bd427bb3896bd07a4bcd7d1a47a4780a7df70144bb115638b11"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-rhi-miniengine-d3d12-mipmap.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-rhi-miniengine-d3d12-mipmap.html",
+      "sha256": "c94840967b03d2350092e0274260f3f532e97864cbeb0ca0783d4168d8c9579b"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-smooth-scaling-algorithm.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-smooth-scaling-algorithm.html",
+      "sha256": "fa0d606ba09611c899fc5d3e89a3e3d73a81b460cbeecf239c7a1a8b27fd3c2f"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-vulkan-xml-spec.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-vulkan-xml-spec.html",
+      "sha256": "bc7d6b023c534b929d60f0fae3d9496589087646b915629f3142392bfe634f1c"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-vulkanmemoryallocator.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-vulkanmemoryallocator.html",
+      "sha256": "aeef0a6c99690c2abd3bde715d2bdee78cd9babcde18ef78559cedcf7b81a985"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-webgradients.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-webgradients.html",
+      "sha256": "d0416152cc19fa6df2412c9209ed1bf28170acb92ad0bfbf130af247d016eabf"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-wintab.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-wintab.html",
+      "sha256": "3813ec18a268af8fc3a61c88c529a3d08603f0bffcb92c18a3d47a4df70af662"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-xcb-xinput.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-xcb-xinput.html",
+      "sha256": "f6d07914f0bbb8393e2656d778a9fc432f10f166f558092fae16dd32082091bc"
+    },
+    {
+      "file": "qt-attributions/qtgui-attribution-xserverhelper.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtgui-attribution-xserverhelper.html",
+      "sha256": "976dcdb3a76ecde46b8764d8df4e67b53edb475c60b270f1c25cfb7989713b44"
+    },
+    {
+      "file": "qt-attributions/qtimageformats-attribution-libtiff.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtimageformats-attribution-libtiff.html",
+      "sha256": "3db3c5e98a80aee721cb2033f587afdaac2d597ea5a942e2d3e0464407716814"
+    },
+    {
+      "file": "qt-attributions/qtimageformats-attribution-libwebp.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtimageformats-attribution-libwebp.html",
+      "sha256": "c317b3249f369475b8dea0741b9ce19370016170a8bbe4cc93d73bf559e2b7cb"
+    },
+    {
+      "file": "qt-attributions/qtnetwork-attribution-libpsl.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtnetwork-attribution-libpsl.html",
+      "sha256": "de9ea3ab008176248802384508b2de357f377653c0731b00fcf751bd3860607b"
+    },
+    {
+      "file": "qt-attributions/qtnetwork-attribution-psl-data.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtnetwork-attribution-psl-data.html",
+      "sha256": "c2bf05e6ab254d26dce7d62fcdf2930e014d0cc264e282978d7a3e8dc6f59225"
+    },
+    {
+      "file": "qt-attributions/qtpdf-3rdparty-abseil.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtpdf-3rdparty-abseil.html",
+      "sha256": "7467cb925a963d9be138fc5d035d1534f19e05bceac1742197665ff6dd2e85a6"
+    },
+    {
+      "file": "qt-attributions/qtpdf-3rdparty-fast-float.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtpdf-3rdparty-fast-float.html",
+      "sha256": "c9d7eb677a3320a31c3062babb8cf0d694ed5ac630ccbcc93ab62b8bb49c474b"
+    },
+    {
+      "file": "qt-attributions/qtpdf-3rdparty-freetype.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtpdf-3rdparty-freetype.html",
+      "sha256": "d6e34115f3d122caf7d2416316927169dbdcf1dd21d6fbbeb2ea14be8c508dc7"
+    },
+    {
+      "file": "qt-attributions/qtpdf-3rdparty-icu.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtpdf-3rdparty-icu.html",
+      "sha256": "2d9e28f10c15bb3600b124a35eb24bc9dd0f633d328e47711a111a12ef04e6fe"
+    },
+    {
+      "file": "qt-attributions/qtpdf-3rdparty-libjpeg-turbo.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtpdf-3rdparty-libjpeg-turbo.html",
+      "sha256": "48af93bd04b9f25ba03535f51a9b9489258ed169409c2c9a8b5c902caafe7e14"
+    },
+    {
+      "file": "qt-attributions/qtpdf-3rdparty-libpng.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtpdf-3rdparty-libpng.html",
+      "sha256": "742d58c775a3fa30dfd996fadaab22c266ee1e6ed43a03b60b6979e4e8115ae4"
+    },
+    {
+      "file": "qt-attributions/qtpdf-3rdparty-pdfium.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtpdf-3rdparty-pdfium.html",
+      "sha256": "15758f185595a2ba55968066cfec7eb1481e54cc09e1a3f18f2e8cd8eccea638"
+    },
+    {
+      "file": "qt-attributions/qtpdf-3rdparty-the-chromium-project.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtpdf-3rdparty-the-chromium-project.html",
+      "sha256": "b6770d0a9da5ef5a38e58f3b9369e14ff20fe26e271de87907c58c6088af5259"
+    },
+    {
+      "file": "qt-attributions/qtpdf-3rdparty-zlib.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtpdf-3rdparty-zlib.html",
+      "sha256": "16d92eb2423e38c4d366176be784a17037b63d991057a5055fd1efbed649a0ce"
+    },
+    {
+      "file": "qt-attributions/qtsvg-attribution-xsvg.txt",
+      "source": "https://doc.qt.io/qt-6.11/qtsvg-attribution-xsvg.html",
+      "sha256": "902a29a0a93078d8707e3733064d99a2e6892df5e9b28161c88c89045c45e21d"
+    },
+    {
+      "file": "LGPL-3.0.txt",
+      "source": "https://raw.githubusercontent.com/qt/qtbase/v6.11.2/LICENSES/LGPL-3.0-only.txt",
+      "sha256": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768"
+    },
+    {
+      "file": "GPL-3.0.txt",
+      "source": "https://raw.githubusercontent.com/qt/qtbase/v6.11.2/LICENSES/GPL-3.0-only.txt",
+      "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
+    },
+    {
+      "file": "WiX-MS-RL.txt",
+      "source": "https://raw.githubusercontent.com/wixtoolset/wix/v5.0.2/LICENSE.TXT",
+      "sha256": "dfdf2048787635215a6baf3b9d461dee89a2904d246787258a44f072a98d4786"
+    },
+    {
+      "file": "OpenSSL-Apache-2.0.txt",
+      "source": "https://raw.githubusercontent.com/openssl/openssl/openssl-3.0.16/LICENSE.txt",
+      "sha256": "7d5450cb2d142651b8afa315b5f238efc805dad827d91ba367d8516bc9d49e7a"
+    },
+    {
+      "file": "OpenSSL-3.6.4-Apache-2.0.txt",
+      "source": "https://raw.githubusercontent.com/openssl/openssl/openssl-3.6.4/LICENSE.txt",
+      "sha256": "7d5450cb2d142651b8afa315b5f238efc805dad827d91ba367d8516bc9d49e7a"
+    },
+    {
+      "file": "Python-3.12.10.txt",
+      "source": "installed distribution: LICENSE.txt",
+      "sha256": "e502c6b880ff58d614901495a9009c136539cd0b1e2a2abb8fc00b934c203419"
+    },
+    {
+      "file": "PyInstaller-bootloader.txt",
+      "source": "installed distribution: COPYING.txt",
+      "sha256": "0598064c7d2718e38d7914a7d08343b2fa008e3bea9ebba2aa7a6ffa5900dd64"
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+EFTX TILT — LICENÇA PROPRIETÁRIA DE USO RESTRITO
+Versão dos termos: 1.0 — 7 de outubro de 2026
+Copyright (c) 2026 EFTX ANTENNAS. Todos os direitos reservados sobre os componentes próprios.
+
+1. AUTORIZAÇÃO DE USO
+O EFTX Tilt é disponibilizado exclusivamente para uso da EFTX ANTENNAS e de
+pessoas ou organizações expressamente autorizadas por ela. A autorização é
+limitada, não exclusiva e não transferível, nos limites da autorização escrita
+concedida pela EFTX. Baixar o programa, acessar seu repositório ou aceitar estes
+termos não substitui a autorização de uso da EFTX.
+
+2. RESTRIÇÕES SOBRE OS COMPONENTES PRÓPRIOS
+Sem autorização prévia e escrita da EFTX, não é permitido revender, sublicenciar,
+ceder, redistribuir, publicar cópias, disponibilizar o programa como serviço a
+terceiros, modificar ou criar obras derivadas dos componentes próprios da EFTX.
+É vedada a remoção de marcas e avisos de titularidade. São permitidas cópias de
+segurança necessárias ao uso autorizado. Acesso público ao código não concede
+uma licença de software livre nem uma autorização comercial.
+
+3. BIBLIOTECAS E MATERIAIS DE TERCEIROS
+Estas restrições aplicam-se somente aos componentes de titularidade da EFTX.
+Bibliotecas, ferramentas, dados e demais materiais de terceiros permanecem
+sujeitos aos direitos e às licenças de seus respectivos titulares. Os avisos e
+textos correspondentes acompanham o programa em THIRD_PARTY_NOTICES.md e na
+pasta licenses. Em caso de conflito, prevalecem os termos do terceiro para o
+respectivo componente. Nenhum direito concedido por essas licenças é reduzido.
+
+Qt, PySide6 e Shiboken são utilizados sob LGPL versão 3. É permitida a alteração
+e substituição das bibliotecas abrangidas por essa licença e a engenharia
+reversa necessária para depurar tais alterações, conforme a LGPL. A distribuição
+utiliza bibliotecas compartilhadas substituíveis; instruções e fontes estão em
+licenses/SOURCES.md. Nenhuma restrição acima impede o exercício desses direitos
+ou de direitos que não possam ser afastados pela legislação aplicável.
+
+4. RESULTADOS DE ENGENHARIA
+O programa é uma ferramenta de apoio. Seus modelos são aproximações e dependem
+dos dados informados. Resultados devem ser conferidos pelo responsável técnico,
+inclusive em bancada quando cabível. A licença não certifica instalações,
+produtos, capacidade térmica, conformidade regulatória ou desempenho em campo.
+Os projetos e relatórios produzidos pelo usuário não passam a pertencer à EFTX
+pelo simples uso do programa.
+
+5. GARANTIAS, RESPONSABILIDADE E SUPORTE
+Salvo compromisso escrito específico e direitos previstos em lei, o programa
+é fornecido no estado em que se encontra, sem garantia de adequação a uma
+finalidade particular ou de ausência de erros. Garantias, suporte, atualizações
+e responsabilidades adicionais dependem de ajuste escrito com a EFTX. Nenhuma
+cláusula exclui responsabilidade ou direito que não possa ser excluído por lei.
+
+6. DESCUMPRIMENTO E ACEITE
+O descumprimento dos limites da autorização encerra a permissão de uso dos
+componentes próprios, sem prejuízo dos direitos relativos aos componentes de
+terceiros e das disposições legais aplicáveis. Ao prosseguir com a instalação,
+o usuário declara ter lido e aceitado estes termos e possuir autorização de uso.
+Se não concordar, cancele a instalação. Autorizações adicionais devem ser obtidas
+diretamente com a EFTX ANTENNAS.

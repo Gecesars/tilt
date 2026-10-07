@@ -12,6 +12,11 @@ if os.name == 'nt':
     a.binaries = [entry for entry in a.binaries
                   if not (os.path.basename(entry[0]).lower() == 'icuuc.dll'
                           or os.path.basename(entry[0]).lower().startswith('icudt'))]
+# The desktop uses physical keyboard input, not Qt Virtual Keyboard (GPL-only).
+# Do not ship an unused optional plugin or the Qt Quick chain it pulls in.
+unused_qt = {'qtvirtualkeyboardplugin.dll', 'qt6virtualkeyboard.dll', 'qt6quick.dll',
+             'qt6qml.dll', 'qt6qmlmeta.dll', 'qt6qmlmodels.dll', 'qt6qmlworkerscript.dll', 'qt6opengl.dll'}
+a.binaries = [entry for entry in a.binaries if os.path.basename(entry[0]).lower() not in unused_qt]
 pyz = PYZ(a.pure)
 exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name='EFTX_Tilt', debug=False,
           bootloader_ignore_signals=False, strip=False, upx=False, console=os.environ.get('EFTX_BUILD_CONSOLE') == '1',

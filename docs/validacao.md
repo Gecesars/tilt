@@ -3,6 +3,42 @@
 Ambiente: Windows 11 x64, Python 3.12.10, PySide6 6.11.2,
 SQLite da biblioteca padrão, PyInstaller 6.22.3.
 
+## Instalador e distribuição 1.3.0
+
+- **127 testes aprovados**, incluindo validação de componentes WiX, inventário,
+  exclusão de bancos/segredos e do plugin Qt Virtual Keyboard e licença RTF.
+- MSI x64 compilado com WiX **5.0.2**, extensão UI 5.0.2, idioma 1046 (português
+  do Brasil), escopo por usuário. Validação ICE habilitada, sem avisos/erros.
+- Verificação das tabelas do MSI: EULA EFTX incorporada; avanço a partir da
+  licença condicionado a `LicenseAccepted = "1"`. Instalação silenciosa sem
+  aceite retorna **1603**, com mensagem exigindo `EFTX_ACCEPT_LICENSE=1`.
+- Ciclo final executado no Windows em 07/10/2026: instalação **0**, reparação
+  **0**, desinstalação **0**. Os **280 arquivos** instalados conferem por SHA-256
+  com o inventário. Reparação restaurou `LICENSE.txt` removido propositalmente
+  da pasta exclusiva de teste e manteve o caminho personalizado.
+- Teste encontrou e corrigiu perda do caminho personalizado na reparação;
+  o MSI agora recupera `InstallLocation` do HKCU antes de resolver diretórios.
+- Executável instalado: Qt offscreen e Windows nativo retornaram **0**, geraram
+  PDFs de **7 páginas** e abriram a prévia. pypdf confirmou versão, LCF12-50,
+  potência média de 1519,819 W, pico 38000 W, malha a malha e modelo de dipolo.
+  Os dois bancos de diagnóstico têm integridade `ok`, 47 modelos e 1669 amostras.
+- Desinstalação removeu o produto e os arquivos próprios. SHA-256 do banco real
+  e de um atalho EFTX preexistente permaneceram iguais; arquivo extra colocado
+  pelo teste na pasta instalada foi preservado.
+- ZIP final: **280 arquivos**, CRC válido e SHA-256 de cada entrada igual ao
+  payload do MSI. Licença própria e avisos/fontes de terceiros acompanham ambos.
+  Hashes dos artefatos publicados são distribuídos em `SHA256SUMS.txt`.
+- `compileall` e `git diff --check` executados. Textos de licenças de terceiros
+  preservam bytes e espaços do original por `.gitattributes` e possuem manifesto
+  de origem/hash. Qt Virtual Keyboard/QML/Quick não utilizados foram excluídos;
+  Qt PDF e a prévia continuam funcionais no pacote final.
+
+Limites desta validação: ciclo MSI local automatizado, sem sessão manual completa
+do assistente, sem máquina limpa adicional e sem teste de atualização entre duas
+versões MSI publicadas. Executável e MSI sem assinatura digital de editor.
+Nenhum trabalho foi enviado a impressora física. Os termos EFTX são aceite de
+licença, sem mecanismo de ativação/DRM.
+
 ## Diagrama completo, fabricação e potência 1.3.0
 
 - **119 testes aprovados** em 07/10/2026. As duas referências XLS continuam

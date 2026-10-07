@@ -7,8 +7,11 @@ Identidade visual: logo **EFTX ANTENNAS** fornecido pelo usuário.
 ## Executar no Windows
 
 - Ambiente preparado: abra **`iniciar.cmd`**.
-- Distribuição portátil 1.3: abra **`dist/1.3.0/EFTX_Tilt/EFTX_Tilt.exe`**. A pasta
-  `_internal` deve permanecer junto ao executável; não é necessário instalar Python.
+- Baixe o **MSI para Windows x64** em [Releases](https://github.com/Gecesars/tilt/releases).
+  Leia e aceite a licença, escolha a pasta e conclua. O programa cria atalhos no
+  menu Iniciar e na área de trabalho; não é necessário instalar Python.
+- Distribuição portátil: extraia todo o ZIP e abra **`EFTX_Tilt/EFTX_Tilt.exe`**.
+  Mantenha `_internal`, `LICENSE.txt`, `THIRD_PARTY_NOTICES.md` e `licenses/` na pasta.
 - Instalação a partir do código (Python 3.11 ou superior):
 
 ```powershell
@@ -23,6 +26,23 @@ Para definir outro banco:
 ```powershell
 .\.venv\Scripts\python.exe -m tilt --database D:\projetos\meu_tilt.sqlite3
 ```
+
+O MSI instala para o usuário atual em `%LOCALAPPDATA%/Programs/EFTX/Tilt` por
+padrão. Reparar ou desinstalar o programa preserva o banco no diretório de dados.
+Consulte [instalação e empacotamento](docs/instalador.md) para uso silencioso,
+geração do MSI e validação de integridade. Esta distribuição não possui assinatura
+digital de editor.
+
+## Licença
+
+O código próprio é proprietário EFTX. O uso é restrito à EFTX e a usuários
+expressamente autorizados por escrito; o acesso ao repositório ou ao download
+não concede autorização. Leia [LICENSE.txt](LICENSE.txt). O instalador solicita
+aceite dos termos; não implementa ativação ou controle de acesso remoto.
+
+As bibliotecas conservam suas licenças originais, inclusive os direitos LGPL
+aplicáveis. Consulte [avisos de terceiros](THIRD_PARTY_NOTICES.md) e
+[fontes e substituição das bibliotecas](licenses/SOURCES.md).
 
 ## Uso em três passos
 
@@ -152,6 +172,7 @@ aproximação analítica do elemento selecionado; não é ganho em dBi ou diagra
 .\.venv\Scripts\python.exe -m tilt --database .artifacts/smoke.sqlite3 --smoke-test
 .\.venv\Scripts\python.exe -m tilt --database .artifacts/smoke.sqlite3 --smoke-test --smoke-pdf .artifacts/smoke.pdf
 powershell -ExecutionPolicy Bypass -File .\build_windows.ps1
+powershell -ExecutionPolicy Bypass -File .\build_installer.ps1
 ```
 
 Os testes cobrem paridade numérica com XLS, sentido do feixe, orçamento de
@@ -181,5 +202,5 @@ tests/                regressão numérica, persistência e interface
 ```
 
 Os dados de trabalho e executáveis ficam fora do Git. O logo foi adotado por
-instrução do usuário; não foi redesenhado. Antes de redistribuição a terceiros,
-confira os direitos do catálogo e os termos de distribuição do Qt/PySide6.
+instrução do usuário; não foi redesenhado. Os termos EFTX não alteram os direitos
+sobre o catálogo importado nem as licenças dos componentes de terceiros.

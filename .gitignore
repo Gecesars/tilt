@@ -9,3 +9,4 @@ build/
 dist/
 .artifacts/
 .env
+.wix/
