@@ -49,3 +49,46 @@ def write_diagnostics(path):
               'loaded_modules': modules, 'path': os.environ.get('PATH', '')}
     Path(path).write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding='utf-8')
     return not outside
+
+
+def start_update_diagnostic(app, parent, path, download=False):
+    """Opt-in HTTPS smoke check. Downloads may be verified but never executed."""
+    from dataclasses import asdict
+    from PySide6.QtNetwork import QSslSocket
+    from .updates import UpdateClient, verify_installer
+    from . import __version__
+    path = Path(path)
+    client = UpdateClient(parent, cache_dir=path.parent/'update-smoke-downloads')
+    report = {'application': __version__, 'tls_backend': QSslSocket.activeBackend(),
+              'tls_available': QSslSocket.supportsSsl(), 'download_verified': False,
+              'installer_executed': False}
+
+    def finish(error=''):
+        report['ok'] = not error
+        if error:
+            report['error'] = error
+        path.write_text(json.dumps(report, indent=2), encoding='utf-8')
+        client.discard()
+        app.exit(5 if error else 0)
+
+    def checked(release):
+        report['release'] = asdict(release)
+        if download:
+            client.download(release)
+        else:
+            finish()
+
+    def downloaded(installer, release):
+        try:
+            verify_installer(installer, release)
+        except (OSError, ValueError):
+            finish('Instalador recebido inválido.')
+            return
+        report['download_verified'] = True
+        finish()
+
+    client.checked.connect(checked)
+    client.downloaded.connect(downloaded)
+    client.failed.connect(finish)
+    client.check()
+    return client

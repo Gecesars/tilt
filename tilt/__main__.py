@@ -21,11 +21,20 @@ def main():
     parser.add_argument('--smoke-pdf', type=Path, help='Com --smoke-test, gera um PDF de exemplo e testa sua prévia; não imprime')
     parser.add_argument('--smoke-diagnostics', type=Path, help='Com --smoke-test, grava versões e caminhos locais das DLLs carregadas')
     parser.add_argument('--smoke-center', action='store_true', help='Com --smoke-test e --database, testa o exemplo FM e seu salvamento')
+    parser.add_argument('--smoke-updates', type=Path, help='Com --smoke-test e --database, verifica HTTPS no GitHub e grava diagnóstico')
+    parser.add_argument('--smoke-update-download', action='store_true', help='Com --smoke-updates, também baixa e verifica o EXE; nunca instala')
+    parser.add_argument('--smoke-delay-ms', type=int, default=1200, help='Tempo de abertura no diagnóstico, entre 1200 e 15000 ms')
     args = parser.parse_args()
     if (args.smoke_pdf or args.smoke_diagnostics) and not args.smoke_test:
         parser.error('--smoke-pdf e --smoke-diagnostics requerem --smoke-test')
     if args.smoke_center and (not args.smoke_test or not args.database):
         parser.error('--smoke-center requer --smoke-test e --database para usar um banco de teste explícito')
+    if args.smoke_updates and (not args.smoke_test or not args.database):
+        parser.error('--smoke-updates requer --smoke-test e --database')
+    if args.smoke_update_download and not args.smoke_updates:
+        parser.error('--smoke-update-download requer --smoke-updates')
+    if not 1200 <= args.smoke_delay_ms <= 15000 or (args.smoke_delay_ms != 1200 and not args.smoke_test):
+        parser.error('--smoke-delay-ms requer --smoke-test e valor entre 1200 e 15000')
     app = QApplication(sys.argv[:1])
     # Windows' offscreen Qt plugin does not enumerate fonts. Keep diagnostic
     # PDFs readable while native Windows continues to use its normal font set.
@@ -45,6 +54,8 @@ def main():
         return 1
     window = MainWindow(db)
     window.show()
+    if not args.smoke_test:
+        window.updates.start()
     if args.smoke_test:
         if args.smoke_center:
             window.load_central_example()
@@ -70,7 +81,11 @@ def main():
             if not write_diagnostics(args.smoke_diagnostics):
                 db.close()
                 return 3
-        QTimer.singleShot(1200, app.quit)
+        if args.smoke_updates:
+            from .diagnostics import start_update_diagnostic
+            window.update_diagnostic = start_update_diagnostic(app, window, args.smoke_updates, args.smoke_update_download)
+        else:
+            QTimer.singleShot(args.smoke_delay_ms, app.quit)
     code = app.exec()
     db.close()
     return code

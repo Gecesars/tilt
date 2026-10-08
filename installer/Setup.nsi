@@ -48,6 +48,29 @@ Function .onInit
     SetErrorLevel 1633
     Quit
   ${EndIf}
+  ; The updater starts this wizard, saves its project and exits. Wait for the
+  ; application process to release its executable and Qt DLLs before copying.
+  ${GetParameters} $0
+  ${GetOptions} $0 "/WAITPID=" $1
+  ${If} $1 != ""
+    System::Call 'kernel32::OpenProcess(i 0x00100000, i 0, i r1) p .r2'
+    ${If} $2 P<> 0
+      System::Call 'kernel32::WaitForSingleObject(p r2, i 60000) i .r3'
+      System::Call 'kernel32::CloseHandle(p r2)'
+      ${If} $3 != 0
+        MessageBox MB_OK|MB_ICONSTOP "Feche o EFTX Tilt antes de atualizar e execute o instalador novamente." /SD IDOK
+        SetErrorLevel 1618
+        Quit
+      ${EndIf}
+    ${Else}
+      System::Call 'kernel32::GetLastError() i .r3'
+      ${If} $3 != 87
+        MessageBox MB_OK|MB_ICONSTOP "Não foi possível confirmar o fechamento do EFTX Tilt. Feche o aplicativo e tente novamente." /SD IDOK
+        SetErrorLevel 1618
+        Quit
+      ${EndIf}
+    ${EndIf}
+  ${EndIf}
   ${If} ${Silent}
     ${GetParameters} $0
     ${GetOptions} $0 "/ACCEPTEULA=" $1

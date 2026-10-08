@@ -1,5 +1,39 @@
 # Evidências de validação
 
+## Atualizador incluído na release 1.4.0 — 08/10/2026
+
+- **229 testes aprovados** (`python -m pytest -q`), incluindo os testes RF
+  anteriores e 47 cenários do atualizador. Comparação numérica de versões,
+  recusas, origem restrita, SHA-256, tamanho, redirecionamento, TLS, erros HTTP,
+  timeout, cancelamento e download real contra servidor de teste.
+- Consentimento antes de baixar e antes de instalar; recusa não instala.
+  Salva a entrada atual antes do lançamento; erro no cálculo, SQLite ou
+  lançamento impede o fechamento do aplicativo. Testes usam processo simulado
+  para essas decisões; não instalam executáveis de fixtures.
+- Aplicativo instalado no Windows 11 x64 build **26300** consultou a API real
+  e baixou o EXE público 1.4.0: backend **Schannel**, TLS disponível, tamanho e
+  hash conferidos. Diagnóstico não executou o download. Sem Python/Qt no PATH.
+- Pacote final: **233 arquivos** conferidos e **20 módulos de runtime** locais.
+  Inicialização, exemplos de cabos/divisor central, PDF e SQLite aprovados nos
+  plugins Qt offscreen e Windows; licença não aceita retorna 1603.
+- Instalação nova, reinstalação e desinstalação com saída 0. `/WAITPID` manteve
+  o instalador aguardando enquanto o aplicativo real estava aberto e liberou
+  a cópia após seu encerramento normal. Dados reais conservaram seus hashes e
+  o arquivo extra da pasta de teste permaneceu após a remoção.
+- Atualização real da primeira edição 1.4.0 para a reconstrução com atualizador
+  também passou. O EXE de origem tinha SHA-256
+  `7a4c48556a1f1f348679d7308c8e997e9645f79e4495cf3cae55c853e58275cb`.
+  Pasta personalizada reutilizada sem `/D`, projetos e arquivo extra preservados.
+- Capturas de widgets reais inspecionadas: oferta de atualização e bancada
+  compacta de 1100×760, com menu Ajuda e ações legíveis.
+- ZIP com CRC/SHA-256 conferidos, `compileall` e `git diff --check` executados.
+
+Limites: sem Windows 10 real, assinatura digital ou ensaio de uma futura release
+de versão superior publicada. Decisões de oferta para versão superior foram
+testadas com metadados controlados; rede e integridade foram testadas com a
+release real disponível. A primeira edição 1.4.0 precisa reinstalação manual
+para receber o atualizador. [Contrato e fontes](atualizacoes.md).
+
 ## Divisor central e release 1.4.0 — 08/10/2026
 
 - **182 testes aprovados**, preservando a suíte anterior. Paridade com as células

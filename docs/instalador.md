@@ -108,7 +108,15 @@ normal. O CI também constrói e testa o EXE em um runner Windows separado;
 `package_release.py` confere o payload contra o inventário, gera o ZIP, valida
 CRC e SHA-256 de cada entrada e escreve `SHA256SUMS.txt`. Publique EXE, ZIP,
 licença, avisos e hashes na tag do commit com CI aprovado. Não substitua os bytes
-de uma release publicada; incremente a versão. Não publique bancos ou logs privados.
+de uma release publicada por padrão; incremente a versão. A reconstrução 1.4.0
+com atualizador foi solicitada explicitamente e está identificada nas
+[notas de atualização](atualizacoes.md), com tag de fonte adicional e novos hashes.
+Não publique bancos ou logs privados.
+
+O atualizador usa `/WAITPID=<PID>` para o instalador aguardar o fechamento do
+aplicativo antes de substituir DLLs. O teste de instalação também verifica essa
+espera. Use `tools/test_setup.ps1 -CheckUpdates` para testar a consulta HTTPS e
+o download no aplicativo instalado, sem executar o arquivo recebido da rede.
 
 Evidências executadas: [validacao.md](validacao.md). O erro específico do MSI
 relatado pelo usuário não foi reproduzido sem sua mensagem/log; o EXE oferece

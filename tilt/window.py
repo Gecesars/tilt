@@ -102,6 +102,8 @@ class MainWindow(QMainWindow):
         print_action.setShortcut(QKeySequence.StandardKey.Print)
         print_action.triggered.connect(self.prepare_print)
         self.addAction(print_action)
+        from .update_ui import UpdateController
+        self.updates = UpdateController(self)
 
     def _header(self):
         frame = QFrame()
@@ -727,16 +729,17 @@ class MainWindow(QMainWindow):
     def save_project(self):
         if self.result is None:
             self.statusBar().showMessage('Calcule o arranjo antes de salvar.')
-            return
+            return False
         try:
             project_id = self.db.save_project(self.project_name.text(), self.calculated_payload,
                     snapshot(self.result, self.model.currentText(), self.db.catalog_hash, self.diagrams.view_range))
         except (ValueError, sqlite3.Error) as exc:
             self.error.setText(str(exc) if isinstance(exc, ValueError) else 'Não foi possível salvar no banco. Verifique espaço e permissão de escrita.')
             self.error.show()
-            return
+            return False
         self.refresh_projects()
         self.statusBar().showMessage(f'Revisão #{project_id} salva no SQLite com entradas e resultados.')
+        return True
 
     def refresh_projects(self):
         fill_table(self.project_table, [[r['id'], r['title'], datetime.fromisoformat(r['created_at']).astimezone().strftime('%d/%m/%Y %H:%M:%S')]

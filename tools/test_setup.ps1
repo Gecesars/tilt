@@ -1,4 +1,4 @@
-param([string]$Version = '1.4.0', [string]$UpgradeFrom = '')
+param([string]$Version = '1.4.0', [string]$UpgradeFrom = '', [switch]$CheckUpdates)
 $ErrorActionPreference = 'Stop'
 $tiltRoot = Split-Path -Parent $PSScriptRoot
 $tiltSetup = Join-Path $tiltRoot "dist\EFTX_Tilt-$Version-Setup-x64.exe"
@@ -71,10 +71,36 @@ try {
         $tiltResults["central_$tiltPlatform"] = Invoke-CheckedProcess "$tiltInstall\EFTX_Tilt.exe" "--smoke-test --smoke-center --database `"$tiltRun\central-$tiltPlatform.sqlite3`" --smoke-pdf `"$tiltRun\central-$tiltPlatform.pdf`""
         if ($tiltResults["central_$tiltPlatform"] -ne 0 -or -not (Test-Path -LiteralPath "$tiltRun\central-$tiltPlatform.pdf")) { throw "Central-feed smoke failed: $tiltPlatform" }
     }
+    if ($CheckUpdates) {
+        $tiltResults.update_https = Invoke-CheckedProcess "$tiltInstall\EFTX_Tilt.exe" "--smoke-test --database `"$tiltRun\updates.sqlite3`" --smoke-updates `"$tiltRun\updates.json`" --smoke-update-download"
+        if ($tiltResults.update_https -ne 0) { throw 'Frozen updater HTTPS/download failed.' }
+        $tiltUpdate = Get-Content -LiteralPath "$tiltRun\updates.json" -Raw | ConvertFrom-Json
+        if (-not $tiltUpdate.ok -or -not $tiltUpdate.download_verified -or $tiltUpdate.installer_executed -or $tiltUpdate.tls_backend -ne 'schannel') { throw 'Frozen updater failed its integrity/TLS contract.' }
+    }
     $tiltLicense = (Resolve-Path -LiteralPath "$tiltInstall\LICENSE.txt").Path
     if (-not $tiltLicense.StartsWith($tiltRun+'\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Unsafe test path.' }
     Remove-Item -LiteralPath $tiltLicense
-    $tiltResults.reinstall = Invoke-CheckedProcess $tiltSetup "/S /ACCEPTEULA=1 /D=$tiltInstall"
+    # A live application holds the DLLs. Setup must wait, then resume only after
+    # the application exits. This exercises the same /WAITPID as the updater.
+    $tiltLive = Start-Process -FilePath "$tiltInstall\EFTX_Tilt.exe" -ArgumentList "--smoke-test --smoke-delay-ms 8000 --database `"$tiltRun\waitpid.sqlite3`"" -WindowStyle Hidden -PassThru
+    $tiltPendingSetup = $null
+    try {
+        Start-Sleep -Seconds 2
+        $tiltPendingSetup = Start-Process -FilePath $tiltSetup -ArgumentList "/S /ACCEPTEULA=1 /WAITPID=$($tiltLive.Id) /D=$tiltInstall" -WindowStyle Hidden -PassThru
+        Start-Sleep -Seconds 2
+        $tiltPendingSetup.Refresh()
+        if ($tiltLive.HasExited -or $tiltPendingSetup.HasExited -or (Test-Path -LiteralPath $tiltLicense)) { throw 'Installer did not wait for application exit.' }
+        # Diagnostic timer closes the real Qt app normally, even with no visible
+        # desktop (CI). Do not depend on Process.MainWindowHandle for hidden UI.
+        if (-not $tiltLive.WaitForExit(15000)) { throw 'Test application did not exit.' }
+        if (-not $tiltPendingSetup.WaitForExit(60000)) { throw 'Installer did not resume after application exit.' }
+        $tiltPendingSetup.Refresh()
+        $tiltResults.reinstall = $tiltPendingSetup.ExitCode
+        $tiltResults.waitpid = 'waited for live application and resumed'
+    } finally {
+        if (-not $tiltLive.HasExited) { $tiltLive.Kill() }
+        if ($tiltPendingSetup -and -not $tiltPendingSetup.HasExited) { $tiltPendingSetup.Kill() }
+    }
     if ($tiltResults.reinstall -ne 0 -or -not (Test-Path -LiteralPath $tiltLicense)) { throw 'Reinstall did not restore package.' }
 } finally {
     foreach ($tiltKey in $tiltSavedEnv.Keys) { [Environment]::SetEnvironmentVariable($tiltKey,$tiltSavedEnv[$tiltKey],'Process') }

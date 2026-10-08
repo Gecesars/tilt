@@ -40,6 +40,24 @@ Consulte [instalação e empacotamento](docs/instalador.md) para uso silencioso,
 geração do EXE e validação de integridade. Esta distribuição não possui assinatura
 digital de editor.
 
+## Atualizações do aplicativo
+
+A edição 1.4.0 com atualizador consulta a release estável do GitHub ao abrir e
+a cada 24 horas enquanto estiver aberta. Também é possível usar **Ajuda →
+Verificar atualizações…**. Uma versão mais nova oferece **Baixar atualização**;
+**Agora não** mantém o aplicativo em uso. Sem internet, os cálculos continuam locais.
+
+O download mostra progresso e pode ser cancelado. Depois de verificar origem,
+tamanho e SHA-256, o app oferece **Salvar cálculo e instalar**: salva uma revisão,
+fecha e abre o instalador. Se o cálculo ou o salvamento falhar, a instalação
+é adiada. Reabra pelo atalho **EFTX Tilt Desktop** ao terminar.
+Os detalhes técnicos estão em [atualizações](docs/atualizacoes.md).
+
+Quem instalou a primeira edição 1.4.0 precisa baixar e executar novamente o EXE
+desta release para receber o atualizador. As próximas versões serão oferecidas
+pelo próprio aplicativo. A edição portátil usa o mesmo instalador por usuário
+ao aceitar a atualização; a pasta extraída não é substituída.
+
 ## Licença
 
 O código próprio é proprietário EFTX. O uso é restrito à EFTX e a usuários
