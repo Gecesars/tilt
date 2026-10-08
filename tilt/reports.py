@@ -14,11 +14,13 @@ def fmt(value, digits=3):
 
 
 def snapshot(result: Result, model: str, catalog_hash: str, view_range=(-90.0, 90.0)):
-    return {'schema_version': 2, 'engine_version': ENGINE_VERSION, 'model': model,
+    return {'schema_version': 3, 'engine_version': ENGINE_VERSION, 'model': model,
             'catalog_sha256': catalog_hash, 'result': asdict(result),
             'fabrication': {
                 'reference': result.design.length_reference,
                 'reference_description': LENGTH_REFERENCES[result.design.length_reference],
+                'feed_layout': result.design.feed_layout,
+                'total_branch_m': sum(e.length_m for e in result.elements),
                 'termination_assumption': 'Atrasos iguais nas terminações; pontas expostas e conectores excluídos da medida de blindagem.',
                 'units': 'mm',
                 'rows': [{'element': e.number, 'ideal_mm': e.ideal_length_m*1000, 'finished_mm': e.length_m*1000,
@@ -53,9 +55,51 @@ def export_csv(path: Path, result: Result, model: str):
                              fmt(e.length_m*1000, 6), fmt(e.relative_phase_deg, 6),
                              fmt(e.phase_error_deg, 6), fmt(e.loss_db, 6), fmt(e.power_w, 6),
                              fmt(e.delta_previous_m*1000 if e.delta_previous_m is not None else None, 6), fmt(e.delta_e1_m*1000, 6)])
+        if result.center_feed:
+            writer.writerow(['Divisor central — altura acima de E1 (m)', fmt(result.center_feed.divider_height_m, 6)])
+            writer.writerow(['Antena', 'Posição / divisor (mm)', 'Percurso mínimo (mm)', 'Base (lambda_g)',
+                             'Base (mm)', 'Correção tilt (mm)', 'Lambda_g adicionados', 'Comprimento / lambda_g'])
+            for b, e in zip(result.center_feed.branches, result.elements):
+                writer.writerow([f'E{b.number}', fmt(b.offset_from_divider_m*1000, 6), fmt(b.minimum_route_m*1000, 6),
+                                 fmt(b.base_wavelengths, 2), fmt(b.base_length_m*1000, 6), fmt(b.tilt_correction_m*1000, 6),
+                                 b.added_wavelengths, fmt(e.length_m/result.guided_wavelength_m, 6)])
         for warning in result.warnings:
             writer.writerow(['Observação', warning])
         writer.writerow(['Limite do modelo', 'Divisão igual, elementos idênticos; sem acoplamento, ROE ou rendimento de radiação.'])
+
+
+def center_feed_html(result):
+    if not result.center_feed:
+        return ''
+    d, plan = result.design, result.center_feed
+    rows = ''.join(f'<tr><td>E{b.number}</td><td>{fmt(b.offset_from_divider_m*1000)}</td>'
+                   f'<td>{fmt(b.minimum_route_m*1000)}</td><td>{fmt(b.base_wavelengths, 2)}</td>'
+                   f'<td>{fmt(b.tilt_correction_m*1000)}</td><td>{b.added_wavelengths}</td>'
+                   f'<td>{fmt(e.length_m*1000)}</td></tr>' for b, e in zip(plan.branches, result.elements))
+    return (f'<h2>Divisor central e dimensionamento por λg</h2>'
+            f'<p>Divisor no centro: {fmt(plan.divider_height_m)} m acima de E1. '
+            f'Espaçamento: {fmt(d.spacing_m/result.wavelength_m, 6)} λ₀. '
+            f'λ₀ = {fmt(result.wavelength_m*1000)} mm; λg = {fmt(result.guided_wavelength_m*1000)} mm.<br>'
+            f'Folga de percurso: {fmt(d.route_extra_m)} m por ramal. Reserva adicional comum: {d.reserve_wavelengths} λg.<br>'
+            f'Total de cabos dos ramais: {fmt(sum(e.length_m for e in result.elements))} m '
+            f'(sem a linha comum de {fmt(d.common_feeder_m)} m).</p>'
+            '<p>Base da planilha: 1,25 λg no par central, 2,25 λg no par seguinte, 3,25 λg no próximo. '
+            'Para quantidade ímpar, o elemento central começa em 0,25 λg. '
+            'A posição é negativa abaixo do divisor e positiva acima. '
+            'Percurso mínimo = distância vertical ao divisor + folga informada, medida ao longo do trajeto.</p>'
+            '<table><thead><tr><th>Antena</th><th>Posição / divisor (mm)</th><th>Percurso mínimo (mm)</th>'
+            '<th>Base (λg)</th><th>Correção tilt (mm)</th><th>λg adicionados</th><th>Corte final (mm)</th></tr></thead>'
+            f'<tbody>{rows}</tbody></table>'
+            '<p>λg adicionados incluem alcance físico, arredondamento de corte e reserva. '
+            'A base e as voltas inteiras têm fase equivalente entre ramais; a correção aplica o tilt. '
+            'O comprimento final arredondado nunca fica abaixo do percurso mínimo calculado. '
+            'ΔL por nível é a correção de tilt, não a diferença total entre cabos.</p>'
+            '<p><b>Validade de fase na frequência calculada.</b> Voltas inteiras acrescentam atraso real: '
+            'a equivalência não se conserva em toda a banda. Divisor com saídas em fase e terminações iguais são hipóteses. '
+            'O termo λg/4 reproduz a planilha; não dimensiona impedância nem garante casamento. '
+            'Raio mínimo de curvatura e preparo dos conectores precisam de conferência na montagem.</p>'
+            '<p class="note">Referência: Calculo de cabos para antena fm.ods, Plan1, D2/D3, G2/H2, B6:B7, B10:B13 e B16:B21. '
+            'Tilt, quantidades diferentes de 2/4/6, folga e alcance são extensões do aplicativo.</p>')
 
 
 def material_html(result):
@@ -100,7 +144,9 @@ def report_html(result: Result, model: str, title: str):
         ('Tilt solicitado (positivo para baixo)', f'{fmt(d.tilt_deg)}°'),
         ('Diagrama de cada antena', ELEMENT_PATTERNS[d.element_pattern]),
         ('Fator de velocidade', fmt(d.velocity_factor, 6)), ('Atenuação', f'{fmt(d.attenuation_db_100m)} dB/100 m'),
-        ('Ramal mais curto', f'{fmt(d.shortest_branch_m)} m'), ('Linha comum', f'{fmt(d.common_feeder_m)} m'),
+        ('Menor ramal calculado' if result.center_feed else 'Ramal mais curto',
+         f'{fmt(min(e.length_m for e in result.elements) if result.center_feed else d.shortest_branch_m)} m'),
+        ('Linha comum', f'{fmt(d.common_feeder_m)} m'),
         ('Perdas adicionais totais', f'{fmt(d.extra_loss_db)} dB'), ('Potência na entrada', f'{fmt(d.input_power_w)} W'),
         ('Passo de corte', f'{fmt(d.cut_step_mm)} mm'), ('Velocidade c', f'{d.speed_m_s:g} m/s')])
     warnings = ''.join(f'<li>{escape(w)}</li>' for w in result.warnings)
@@ -108,6 +154,9 @@ def report_html(result: Result, model: str, title: str):
                       'Pontas expostas do condutor central e conectores não fazem parte desta medida.'
                       if d.length_reference == 'shield_edges' else
                       'Revisão com planos elétricos de referência: não interpretar como medida física de malha a malha sem conferir as terminações.')
+    length_formula = ('Lᵢ = (ceil(|i − q|) + 0,25 + kᵢ) × λg − (i − q) × ΔL; q = (N−1)/2, i = 0…N−1. '
+                      'kᵢ inteiro não negativo inclui alcance e reserva. Fase equivalente calculada módulo 360° em torno do tilt solicitado.'
+                      if result.center_feed else 'Lᵢ = Lmin + max(j × ΔL) − i × ΔL, para i,j = 0…N−1.')
     return f'''<html><head><meta charset="utf-8"><style>
     body {{font-family:Segoe UI,Arial;color:#16283e;font-size:10pt}} h1 {{color:#142ea3}}
     table {{border-collapse:collapse;width:100%;margin:12px 0}} td,th {{padding:6px;border:1px solid #cbd5e1}}
@@ -137,8 +186,9 @@ def report_html(result: Result, model: str, title: str):
     <p>E1 é o elemento inferior. Tilt positivo aponta para baixo. Fase positiva = avanço em relação a E1.</p>
     <table><thead><tr><th>Elemento</th><th>z (m)</th><th>Ideal (mm)</th><th>Corte (mm)</th>
     <th>Fase (°)</th><th>Erro (°)</th><th>Perda (dB)</th><th>W</th></tr></thead><tbody>{rows}</tbody></table>
+    {center_feed_html(result)}
     <h2>Memória de cálculo</h2><p>λ₀ = c/f; λg = VF × λ₀; Δφ = 360° × d/λ₀ × sen(θ); ΔL = VF × d × sen(θ).<br>
-    Lᵢ = Lmin + max(j × ΔL) − i × ΔL, para i,j = 0…N−1. Corte arredondado ao passo informado.<br>
+    {length_formula} Corte arredondado ao passo informado.<br>
     Aᵢ = α × (Lcomum + Lᵢ)/100 + Aextra; Pᵢ = Pin/N × 10^(−Aᵢ/10).<br>
     ηalimentação = ΣPᵢ/Pin. ηcoerência = |Σ aᵢ exp(jεᵢ)|² / (N × Σ aᵢ²), no tilt solicitado.</p>
     <p><b>Diagrama: {escape(ELEMENT_PATTERNS[d.element_pattern])}.</b><br>

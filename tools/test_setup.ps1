@@ -1,4 +1,4 @@
-param([string]$Version = '1.3.2')
+param([string]$Version = '1.4.0', [string]$UpgradeFrom = '')
 $ErrorActionPreference = 'Stop'
 $tiltRoot = Split-Path -Parent $PSScriptRoot
 $tiltSetup = Join-Path $tiltRoot "dist\EFTX_Tilt-$Version-Setup-x64.exe"
@@ -35,8 +35,20 @@ foreach ($tiltKey in @('PATH','PYTHONHOME','PYTHONPATH','QT_PLUGIN_PATH','QT_QPA
 try {
     $tiltResults.license_rejection = Invoke-CheckedProcess $tiltSetup "/S /D=$tiltInstall"
     if ($tiltResults.license_rejection -ne 1603 -or (Test-Path -LiteralPath "$tiltInstall\EFTX_Tilt.exe")) { throw 'Silent EULA check failed.' }
-    $tiltResults.install = Invoke-CheckedProcess $tiltSetup "/S /ACCEPTEULA=1 /D=$tiltInstall"
+    $tiltInstallArguments = "/S /ACCEPTEULA=1 /D=$tiltInstall"
+    if ($UpgradeFrom) {
+        $tiltOldSetup = Join-Path $tiltRoot "dist\EFTX_Tilt-$UpgradeFrom-Setup-x64.exe"
+        if (-not (Test-Path -LiteralPath $tiltOldSetup)) { throw 'Previous installer unavailable.' }
+        $tiltResults.previous_install = Invoke-CheckedProcess $tiltOldSetup $tiltInstallArguments
+        if ($tiltResults.previous_install -ne 0) { throw 'Previous installer failed.' }
+        'preserved during upgrade' | Set-Content -LiteralPath "$tiltInstall\upgrade-user-file.txt"
+        $tiltInstallArguments = '/S /ACCEPTEULA=1'
+    }
+    $tiltResults.install = Invoke-CheckedProcess $tiltSetup $tiltInstallArguments
     if ($tiltResults.install -ne 0) { throw "Install failed: $($tiltResults.install)" }
+    if ($UpgradeFrom -and -not (Test-Path -LiteralPath "$tiltInstall\upgrade-user-file.txt")) { throw 'Upgrade did not retain user file/path.' }
+    $tiltRegistration = Get-ItemProperty 'HKCU:\Software\EFTX\TiltSetup'
+    if ($tiltRegistration.Version -ne $Version -or $tiltRegistration.InstallLocation -ne $tiltInstall) { throw 'Wrong registered version or path.' }
     foreach ($tiltItem in $tiltManifest.files) {
         if ((Get-FileHash -LiteralPath (Join-Path $tiltInstall $tiltItem.path) -Algorithm SHA256).Hash -ne $tiltItem.sha256) { throw "Wrong installed bytes: $($tiltItem.path)" }
     }
@@ -56,6 +68,8 @@ try {
         $tiltDiagnostic = Get-Content -LiteralPath "$tiltRun\$tiltPlatform.json" -Raw | ConvertFrom-Json
         if ($tiltDiagnostic.application -ne $Version -or $tiltDiagnostic.external_runtime_modules.Count -ne 0) { throw 'Runtime loaded from outside the installed package.' }
         $tiltResults["local_runtime_modules_$tiltPlatform"] = $tiltDiagnostic.runtime_modules.Count
+        $tiltResults["central_$tiltPlatform"] = Invoke-CheckedProcess "$tiltInstall\EFTX_Tilt.exe" "--smoke-test --smoke-center --database `"$tiltRun\central-$tiltPlatform.sqlite3`" --smoke-pdf `"$tiltRun\central-$tiltPlatform.pdf`""
+        if ($tiltResults["central_$tiltPlatform"] -ne 0 -or -not (Test-Path -LiteralPath "$tiltRun\central-$tiltPlatform.pdf")) { throw "Central-feed smoke failed: $tiltPlatform" }
     }
     $tiltLicense = (Resolve-Path -LiteralPath "$tiltInstall\LICENSE.txt").Path
     if (-not $tiltLicense.StartsWith($tiltRun+'\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Unsafe test path.' }

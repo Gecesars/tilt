@@ -42,7 +42,8 @@ def report_document(result, model, title, kind, catalog_hash, context=None, view
                          QImage(str(ASSETS/'eftx_logo.jpeg')))
     html = report_html(result, model, title)
     generated = datetime.now().astimezone().strftime('%d/%m/%Y %H:%M:%S %z')
-    mode = 'Automático: 1 λ no espaço livre' if context.get('spacing_auto') else 'Distância informada pelo usuário'
+    mode = (f"Automático: {fmt(context.get('spacing_factor', 1), 3)} λ no espaço livre"
+            if context.get('spacing_auto') else 'Distância informada pelo usuário')
     frequency = (f"Canal TV {context.get('channel')}" if context.get('frequency_mode') == 1 else 'Frequência em MHz')
     if context.get('frequency_mode') == 1 and context.get('ofdm_offset'):
         frequency += ' + 1/7 MHz'
@@ -58,6 +59,8 @@ def report_document(result, model, title, kind, catalog_hash, context=None, view
     # Separate technical memory from long manufacturing tables, including N=64.
     html = html.replace('<h2>Memória de cálculo</h2>',
                         '<h2 style="page-break-before:always">Memória de cálculo e verificações</h2>')
+    html = html.replace('<h2>Divisor central e dimensionamento por λg</h2>',
+                        '<h2 style="page-break-before:always">Divisor central e dimensionamento por λg</h2>')
     figures = []
     automatic_focus = view_range == (-90.0, 90.0)
     detail_range = (max(-90, -result.design.tilt_deg-10), min(90, -result.design.tilt_deg+10)) if automatic_focus else view_range

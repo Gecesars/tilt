@@ -1,4 +1,43 @@
-# Evidência de validação — 07/10/2026
+# Evidências de validação
+
+## Divisor central e release 1.4.0 — 08/10/2026
+
+- **182 testes aprovados**, preservando a suíte anterior. Paridade com as células
+  B6:B7, B10:B13 e B16:B21 da ODS FM em `1e-8 mm`, com frequência 105,3 MHz e
+  VF 0,87. Fixture inclui origem e SHA-256 da planilha.
+- Fasores calculados independentemente a partir dos comprimentos físicos dos
+  cabos e do espaço livre: 2, 3, 4, 5, 6, 12 e 64 elementos; tilt −7°, 0° e +5°.
+  Coerência e direção da progressão conferidas, incluindo ondas adicionais para
+  alcançar antenas. Reserva altera perdas, preservando fase.
+- Quantização, percurso mínimo, contagens ímpares, entradas inválidas, valores
+  não finitos, VF numericamente inadequado, reserva e espaçamento em λ₀ testados.
+- Interface: troca de modo, sem tilt, invalidação de resultado, salvamento e
+  reabertura com `spacing_factor`, `route_extra_m`, reserva e plano central.
+  Revisão versão 1 continua no motor progressivo. Entradas novas versão 2,
+  snapshot versão 3 e esquema SQLite inalterado.
+- PDF: exemplos centrais sem/com tilt têm **8 páginas**; caso de 64 elementos,
+  **21 páginas**, com todos os ramais. Texto extraído com QtPdf/pypdf e páginas
+  de dimensionamento, montagem e continuação da tabela renderizadas com Poppler
+  e inspecionadas. Cabeçalhos repetidos e dados completos no caso longo.
+  Capturas Qt em 1540×1000 e 1100×760, incluindo seletor, desenho e tabela central.
+- EXE NSIS offline: instalação nova e atualização real **1.3.2 → 1.4.0** no
+  Windows 11 x64 build **26300**, ambas com saída 0. Atualização conserva a pasta
+  personalizada sem repassar `/D`; registro indica 1.4.0. **233 arquivos**
+  instalados conferidos por SHA-256. Reinstalação e remoção aprovadas.
+- Executável instalado: exemplos padrão e FM central executados nos plugins
+  offscreen e Windows, todos com saída 0. PDFs centrais de 8 páginas e revisões
+  SQLite salvas/reabertas; valores ODS e integridade do banco confirmados no
+  pacote final. **19 módulos de runtime** locais, com PATH restrito ao Windows.
+- Banco real e atalho EFTX anterior mantiveram seus hashes; arquivos extras
+  preservados na atualização/remoção. ZIP com CRC/hashes conferidos contra o
+  payload; 69 licenças verificadas. `compileall` e `git diff --check` executados.
+
+Não executado: medição em bancada RF, validação de fase em toda a banda,
+conectores/casamento, impressão física e Windows 10 real. A equivalência por
+λg inteiro é na frequência calculada. A folga é informada, não derivada de um
+projeto mecânico. Aplicativo e instalador permanecem sem assinatura digital.
+
+## Histórico — 07/10/2026
 
 Ambiente: Windows 11 x64, Python 3.12.10, PySide6 6.11.2,
 SQLite da biblioteca padrão, PyInstaller 6.22.3.

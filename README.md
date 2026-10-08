@@ -76,7 +76,8 @@ personalizado abre automaticamente os campos necessários. Um erro em um campo
 avançado abre o painel para permitir a correção.
 
 Ao editar a distância, o modo passa para manual e novas frequências preservam
-essa medida. Marque **Espaçamento automático: 1 λ** para retomar o acompanhamento.
+essa medida. Marque **Espaçamento em λ no espaço livre** para retomar o acompanhamento
+com o multiplicador escolhido (padrão: 1 λ₀).
 Projetos antigos mantêm o espaçamento salvo. λ livre é diferente de λ na linha;
 o fator de velocidade do cabo não reduz a distância automática entre antenas.
 
@@ -88,6 +89,35 @@ CSV com separador `;` ou JSON.
 O canal usa centro geométrico de 6 MHz; o deslocamento +1/7 MHz é opcional nos
 ajustes avançados. A seleção de material aplica um único modelo ao cálculo:
 cabo coaxial **ou** linha rígida, incluindo eventual trecho antes do divisor.
+
+## Comprimentos com divisor no centro — versão 1.4.0
+
+No passo 3, selecione **Calcular cabos por → Divisor no centro (λg)**.
+Informe frequência ou canal, modelo/VF, quantidade de antenas e espaçamento.
+O espaçamento automático aceita um **múltiplo de λ₀** (por exemplo, 0,75 ou 1).
+Desmarque **Aplicar tilt elétrico** para calcular sem inclinação.
+
+O divisor fica no meio da altura do sistema. A planilha FM fornecida define
+comprimentos de **1,25 λg, 2,25 λg e 3,25 λg**, simétricos em torno do centro,
+com `λg = VF × c/f`. A distância entre antenas usa λ₀ no espaço livre.
+O aplicativo acrescenta a correção de tilt e, quando necessário, ondas inteiras
+para alcançar cada antena. **Folga por ramal** inclui curvas e percurso lateral
+além da distância vertical. **Reserva adicional** acrescenta λg inteiros a todos.
+
+A aba **Divisor central** mostra posição em relação ao divisor, percurso mínimo,
+base em λg, correção de tilt, ondas adicionadas, corte final e total dos ramais.
+PDF, CSV, JSON e revisões SQLite conservam esses dados. O método anterior continua
+disponível em **Ramal mínimo informado**; revisões antigas mantêm esse método.
+
+Em **Ajustes avançados → Carregar exemplo → FM — divisor central**, carregue a
+referência de 105,3 MHz, VF 0,87 e seis antenas, sem tilt nem arredondamento.
+O exemplo não altera o VF do catálogo. Perdas/potência de um modelo personalizado
+continuam indisponíveis quando não foram informadas.
+
+Ondas inteiras preservam a fase **na frequência calculada**; não equivalem a
+atrasos iguais em toda a banda. Saídas do divisor em fase e terminações iguais
+são hipóteses. O termo λg/4 segue a planilha e não dimensiona impedância.
+Veja [equações e rastreabilidade da referência](docs/engenharia.md).
 
 ## Diagramas verticais
 

@@ -186,7 +186,9 @@ class MainWindow(QMainWindow):
             self.metric_cards[key].setVisible(checked)
         for index in range(1, self.result_tabs.count()):
             self.result_tabs.setTabVisible(index, checked)
-        self.result_tabs.tabBar().setVisible(checked)
+        central = self.feed_layout.currentData() == 'center'
+        self.result_tabs.setTabVisible(self.central_tab_index, central)
+        self.result_tabs.tabBar().setVisible(checked or central)
         if not checked:
             self.result_tabs.setCurrentIndex(0)
         self.result_detail_stack.setCurrentIndex(0)
@@ -226,6 +228,8 @@ class MainWindow(QMainWindow):
         for title, kind in [('Cabos — planilha fornecida', 'cable'), ('Linha rígida — planilha fornecida', 'rigid')]:
             action = menu.addAction(title)
             action.triggered.connect(lambda checked=False, chosen=kind: self.load_example(chosen))
+        action = menu.addAction('FM — divisor central (planilha ODS)')
+        action.triggered.connect(self.load_central_example)
         menu.exec(self.examples_button.mapToGlobal(self.examples_button.rect().bottomLeft()))
 
     def reveal_field(self, edit):
@@ -343,6 +347,17 @@ class MainWindow(QMainWindow):
         Selecionar elemento isotrópico mostra somente esse fator, preservando projetos antigos.
         O modelo não inclui terreno, torre, acoplamento ou descasamento. Não é ganho em dBi nem diagrama medido.
         O pico do conjunto pode diferir do tilt da progressão. Lóbulos de grade remanescentes não são removidos.</p>
+        <h2>06 · Cabos com divisor no centro</h2><p>Selecione <b>Divisor no centro — comprimentos por λg</b>.
+        λ₀ = c/f define o espaçamento entre antenas; λg = VF × λ₀ define o comprimento elétrico do cabo.
+        A planilha FM usa 1,25 λg no par central, 2,25 λg no próximo e 3,25 λg no par externo de seis antenas.
+        O aplicativo admite 2 a 64 elementos. Em quantidade ímpar, a base do elemento central é 0,25 λg.</p>
+        <p>Desmarque Aplicar tilt elétrico para usar fases iguais. Com tilt, a correção é proporcional à altura
+        em relação ao divisor. A folga inclui curvas e deslocamentos além da distância vertical.
+        Se faltar alcance, o cálculo acrescenta ondas inteiras, mantendo a fase na frequência calculada.
+        A reserva opcional acrescenta λg inteiros a todos os ramais. Confira o detalhamento na aba Divisor central.</p>
+        <p>Saídas do divisor são consideradas em fase, com terminações iguais. A equivalência por λg inteiro
+        vale na frequência de projeto, não em toda a banda. A parcela λg/4 segue a planilha e não é um cálculo
+        de casamento de impedância. O exemplo FM usa 105,3 MHz e VF 0,87; não altera o catálogo de fabricantes.</p>
         <h2>Referências</h2><ul><li>Plan1 das duas planilhas fornecidas (D5, D7, D9, D11, D15 e D17).</li>
         <li>Catálogo ADT-PY / Rating / CableRating.xml.</li>
         <li><a href="https://www.analog.com/en/resources/analog-dialogue/articles/phased-array-antenna-patterns-part1.html">Analog Devices: fator de arranjo</a></li>
@@ -377,6 +392,7 @@ class MainWindow(QMainWindow):
     def update_spacing(self, *_):
         if self.loading:
             return
+        self.spacing_factor.setEnabled(self.auto_spacing.isChecked())
         try:
             frequency = parse_decimal(self.fields['frequency_mhz'].text(), 'Frequência')
             length = wavelength_m(frequency, self.speed.currentData())*1000
@@ -387,7 +403,7 @@ class MainWindow(QMainWindow):
         if self.auto_spacing.isChecked():
             self._setting_spacing = True
             try:
-                self.fields['spacing_mm'].setText(f'{length:.9f}'.rstrip('0').rstrip('.').replace('.', ','))
+                self.fields['spacing_mm'].setText(f'{length*self.spacing_factor.value():.9f}'.rstrip('0').rstrip('.').replace('.', ','))
             finally:
                 self._setting_spacing = False
         self.invalidate()
@@ -395,6 +411,21 @@ class MainWindow(QMainWindow):
     def spacing_edited(self):
         if not self.loading and not getattr(self, '_setting_spacing', False):
             self.auto_spacing.setChecked(False)
+
+    def toggle_tilt(self, checked):
+        self.fields['tilt_deg'].setEnabled(checked)
+        if not checked:
+            self.fields['tilt_deg'].setText('0')
+        self.invalidate()
+
+    def feed_layout_changed(self, *_):
+        central = self.feed_layout.currentData() == 'center'
+        self.feed_form.setRowVisible(self.fields['shortest_branch_m'].parentWidget(), not central)
+        self.feed_form.setRowVisible(self.fields['route_extra_m'].parentWidget(), central)
+        self.feed_form.setRowVisible(self.reserve_wavelengths, central)
+        self.feed_form.setRowVisible(self.center_help, central)
+        self.toggle_technical(self.technical_button.isChecked())
+        self.invalidate()
 
     def frequency_changed(self, *_):
         derived = self.frequency_mode.currentIndex() == 1
@@ -464,7 +495,11 @@ class MainWindow(QMainWindow):
             raise
 
     def read_design(self):
-        values = {key: self.number(key, key == 'attenuation_db_100m') for key in self.fields}
+        central = self.feed_layout.currentData() == 'center'
+        inactive = {'shortest_branch_m'} if central else {'route_extra_m'}
+        if not self.apply_tilt.isChecked():
+            inactive.add('tilt_deg')
+        values = {key: 0.0 if key in inactive else self.number(key, key == 'attenuation_db_100m') for key in self.fields}
         if self.model.currentText() != CUSTOM:
             cable = self.db.cable(self.model.currentText())
             self.attenuation_chart.subtitle = 'Pontos do catálogo e interpolação log-log'
@@ -475,13 +510,15 @@ class MainWindow(QMainWindow):
                 values['velocity_factor'] = cable.velocity_factor
         values['spacing_m'] = values.pop('spacing_mm') / 1000
         return Design(**values, elements=self.elements.value(), speed_m_s=self.speed.currentData(),
-                      element_pattern=self.element_pattern.currentData(), length_reference=self.length_reference.currentData())
+                      element_pattern=self.element_pattern.currentData(), length_reference=self.length_reference.currentData(),
+                      feed_layout=self.feed_layout.currentData(), reserve_wavelengths=self.reserve_wavelengths.value() if central else 0)
 
     def input_payload(self, design):
-        return dict(schema_version=1, design=asdict(design), kind=self.kind.currentData(),
+        return dict(schema_version=2, design=asdict(design), kind=self.kind.currentData(),
                     model=self.model.currentText(), override_vf=self.override_vf.isChecked(),
                     frequency_mode=self.frequency_mode.currentIndex(), channel=self.channel.value(),
-                    ofdm_offset=self.ofdm_offset.isChecked(), spacing_auto=self.auto_spacing.isChecked())
+                    ofdm_offset=self.ofdm_offset.isChecked(), spacing_auto=self.auto_spacing.isChecked(),
+                    spacing_factor=self.spacing_factor.value())
 
     def run_calculation(self):
         try:
@@ -496,7 +533,8 @@ class MainWindow(QMainWindow):
             # Domain validation can also identify an invalid value inside a closed panel.
             prefixes = {'Fator de velocidade:': 'velocity_factor', 'Atenuação:': 'attenuation_db_100m',
                         'Perdas adicionais:': 'extra_loss_db', 'Potência de entrada:': 'input_power_w',
-                        'Passo de corte:': 'cut_step_mm', 'Espaçamento:': 'spacing_mm', 'Tilt:': 'tilt_deg'}
+                        'Passo de corte:': 'cut_step_mm', 'Espaçamento:': 'spacing_mm', 'Tilt:': 'tilt_deg',
+                        'Folga de percurso:': 'route_extra_m'}
             for prefix, key in prefixes.items():
                 if str(exc).startswith(prefix):
                     self.reveal_field(self.fields[key])
@@ -529,7 +567,19 @@ class MainWindow(QMainWindow):
         self.result_tabs.setEnabled(True)
         self.array.set_result(r, self.kind.currentData())
         self.lengths.set_result(r, self.kind.currentData())
-        if d.tilt_deg == 0:
+        self.delta_caption.setText('Correção de tilt por nível' if r.center_feed else 'Diferença entre trechos vizinhos')
+        if r.center_feed:
+            self.answer.setText('Divisor no centro: use o comprimento de cada antena na tabela. '
+                                + ('Sem tilt, comprimentos diferentes mantêm a mesma fase na frequência calculada.' if d.tilt_deg == 0 else
+                                   'O tilt é aplicado à fase; os comprimentos incluem ondas inteiras para alcançar cada antena.'))
+            self.central_summary.setText(f'Divisor a {fmt(r.center_feed.divider_height_m, 3)} m acima de E1 · '
+                                         f'λg = {fmt(r.guided_wavelength_m*1000, 3)} mm\n'
+                                         f'Total de ramais: {fmt(sum(e.length_m for e in r.elements), 3)} m · '
+                                         f'Folga mínima por percurso: {fmt(d.route_extra_m, 3)} m')
+            fill_table(self.central_table, [[f'E{b.number}', fmt(b.offset_from_divider_m*1000), fmt(b.minimum_route_m*1000),
+                                            fmt(b.base_wavelengths, 2), fmt(b.tilt_correction_m*1000), b.added_wavelengths,
+                                            fmt(e.length_m*1000)] for b, e in zip(r.center_feed.branches, r.elements)])
+        elif d.tilt_deg == 0:
             self.answer.setText('Sem inclinação: use o mesmo comprimento em todas as antenas. Confira os valores na tabela.')
         else:
             direction, length = ('baixo', 'menores') if d.tilt_deg > 0 else ('cima', 'maiores')
@@ -591,6 +641,8 @@ class MainWindow(QMainWindow):
 
     def load_example(self, kind):
         self.loading = True
+        self.feed_layout.setCurrentIndex(self.feed_layout.findData('progressive'))
+        self.apply_tilt.setChecked(True)
         self.auto_spacing.setChecked(False)
         self.frequency_mode.setCurrentIndex(0)
         self.kind.setCurrentIndex(0 if kind == 'cable' else 1)
@@ -614,6 +666,34 @@ class MainWindow(QMainWindow):
         self.pages.setCurrentIndex(0)
         self.run_calculation()
         self.state.setText('Exemplo da planilha carregado · confira os dados antes de usar na sua instalação.')
+
+    def load_central_example(self):
+        self.loading = True
+        try:
+            self.frequency_mode.setCurrentIndex(0)
+            self.kind.setCurrentIndex(0)
+            self.model.setCurrentText(CUSTOM)
+            self.override_vf.setChecked(False)
+            self.feed_layout.setCurrentIndex(self.feed_layout.findData('center'))
+            self.elements.setValue(6)
+            self.speed.setCurrentIndex(0)
+            self.auto_spacing.setChecked(True)
+            self.spacing_factor.setValue(1)
+            self.apply_tilt.setChecked(False)
+            self.reserve_wavelengths.setValue(0)
+            for key, value in dict(frequency_mhz=105.3, velocity_factor=.87, tilt_deg=0,
+                                   attenuation_db_100m='', route_extra_m=0, shortest_branch_m=0,
+                                   common_feeder_m=0, extra_loss_db=0, input_power_w=1000, cut_step_mm=0).items():
+                self.fields[key].setText(str(value))
+            self.length_reference.setCurrentIndex(self.length_reference.findData('shield_edges'))
+            self.project_name.setText('FM — divisor central — referência ODS')
+        finally:
+            self.loading = False
+        self.update_spacing()
+        self.update_line_properties()
+        self.pages.setCurrentIndex(0)
+        self.run_calculation()
+        self.state.setText('Exemplo ODS: 105,3 MHz · VF 0,87 · 6 antenas · sem tilt · corte ideal.')
 
     def refresh_catalog(self):
         query = self.catalog_search.text().strip().casefold()
@@ -676,7 +756,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, 'Revisão não carregada', 'Dados da revisão inválidos ou incompatíveis com esta versão.')
 
     def restore_payload(self, payload, title):
-        if payload.get('schema_version') != 1:
+        if payload.get('schema_version') not in (1, 2):
             raise ValueError('Versão de projeto incompatível.')
         design = Design(**payload['design'])
         design.validate()
@@ -686,7 +766,14 @@ class MainWindow(QMainWindow):
             self.db.cable(payload['model'])
         self.loading = True
         try:
+            factor = payload.get('spacing_factor', 1.0)
+            if not isinstance(factor, (int, float)) or isinstance(factor, bool) or not .01 <= factor <= 20:
+                raise ValueError('Múltiplo de λ inválido.')
+            self.spacing_factor.setValue(factor)
             self.auto_spacing.setChecked(bool(payload.get('spacing_auto', False)))
+            self.feed_layout.setCurrentIndex(self.feed_layout.findData(design.feed_layout))
+            self.reserve_wavelengths.setValue(design.reserve_wavelengths)
+            self.apply_tilt.setChecked(design.tilt_deg != 0)
             self.kind.setCurrentIndex(0 if payload['kind'] == 'cable' else 1)
             self.model.setCurrentText(payload['model'])
             self.override_vf.setChecked(payload['override_vf'])

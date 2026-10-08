@@ -1,4 +1,4 @@
-# Compatibilidade Windows — EFTX Tilt 1.3.2
+# Compatibilidade Windows — EFTX Tilt 1.4.0
 
 ## Plataforma de destino
 

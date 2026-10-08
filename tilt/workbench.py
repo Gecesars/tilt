@@ -1,12 +1,12 @@
 """Simple first-use view; technical controls stay available by disclosure."""
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QButtonGroup, QCheckBox, QComboBox, QFrame, QGridLayout, QHBoxLayout,
+    QButtonGroup, QCheckBox, QComboBox, QDoubleSpinBox, QFrame, QGridLayout, QHBoxLayout,
     QPushButton, QScrollArea, QSizePolicy, QSpinBox, QSplitter, QStackedWidget,
     QTabWidget, QTextBrowser, QVBoxLayout, QWidget,
 )
 
-from .engineering import C_SI, C_WORKSHEET, ELEMENT_PATTERNS, LENGTH_REFERENCES
+from .engineering import C_SI, C_WORKSHEET, ELEMENT_PATTERNS, LENGTH_REFERENCES, FEED_LAYOUTS
 from .visuals import ArrayIllustration, LengthIllustration, SeriesChart
 
 
@@ -96,15 +96,47 @@ def build_workbench(self):
     self.element_pattern.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
     self.element_pattern.currentIndexChanged.connect(self.invalidate)
     form.addRow('Antena (aprox.)', self.element_pattern)
-    self.auto_spacing = QCheckBox('Espaçamento automático: 1 λ')
+    self.auto_spacing = QCheckBox('Espaçamento em λ no espaço livre')
     self.auto_spacing.setChecked(True)
     self.auto_spacing.setToolTip('Preenche a distância com um comprimento de onda no espaço livre (c/f). Ao editar a distância, o modo passa para manual.')
     form.addRow(self.auto_spacing)
+    self.spacing_factor = QDoubleSpinBox()
+    self.spacing_factor.setRange(.01, 20)
+    self.spacing_factor.setDecimals(3)
+    self.spacing_factor.setSingleStep(.05)
+    self.spacing_factor.setValue(1)
+    self.spacing_factor.setSuffix(' λ₀')
+    self.spacing_factor.setToolTip('Multiplicador de c/f para a distância entre centros. Não usa o fator de velocidade do cabo.')
+    self.spacing_factor.valueChanged.connect(self.update_spacing)
+    form.addRow('Múltiplo de λ', self.spacing_factor)
     self._field(form, 'spacing_mm', 'Distância entre elas', 480, 'mm', 'Meça de centro a centro de duas antenas vizinhas.')
     self.lambda_info = label('', 'Subtitle', True)
     form.addRow(self.lambda_info)
+    self.apply_tilt = QCheckBox('Aplicar tilt elétrico')
+    self.apply_tilt.setChecked(True)
+    form.addRow(self.apply_tilt)
     self._field(form, 'tilt_deg', 'Inclinação desejada', 2, '°', 'Valor positivo inclina para baixo. Valor negativo inclina para cima.')
+    self.apply_tilt.toggled.connect(self.toggle_tilt)
+    self.feed_form = form
+    self.feed_layout = QComboBox()
+    for key, title in FEED_LAYOUTS.items():
+        self.feed_layout.addItem(title, key)
+    self.feed_layout.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
+    form.insertRow(0, 'Calcular cabos por', self.feed_layout)
     self._field(form, 'shortest_branch_m', 'Trecho mais curto', 3, 'm', 'Medida de malha a malha (extremidades da blindagem); na linha rígida, entre extremidades do condutor externo. Não inclui pontas expostas ou conectores.')
+    self._field(form, 'route_extra_m', 'Folga por ramal', 0, 'm', 'Percurso adicional além da distância vertical ao divisor, incluindo deslocamento lateral e curvas. O cabo ganha λg inteiros para alcançar essa medida sem alterar sua fase.')
+    form.setRowVisible(self.fields['route_extra_m'].parentWidget(), False)
+    self.reserve_wavelengths = QSpinBox()
+    self.reserve_wavelengths.setRange(0, 100)
+    self.reserve_wavelengths.setSuffix(' λg')
+    self.reserve_wavelengths.setToolTip('Reserva opcional de ondas inteiras acrescentada a todos os ramais.')
+    self.reserve_wavelengths.valueChanged.connect(self.invalidate)
+    form.addRow('Reserva adicional', self.reserve_wavelengths)
+    form.setRowVisible(self.reserve_wavelengths, False)
+    self.center_help = label('Divisor no meio da altura do sistema. Base da planilha: 1,25 λg nos ramais centrais, 2,25 λg no par seguinte. A tabela já inclui tilt, alcance e corte.', 'Subtitle', True)
+    form.addRow(self.center_help)
+    form.setRowVisible(self.center_help, False)
+    self.feed_layout.currentIndexChanged.connect(self.feed_layout_changed)
     form.addRow(label('Distância: de centro a centro. Inclinação: positiva para baixo; negativa para cima.', 'Subtitle', True))
 
     self.advanced_button = QPushButton('+  Mostrar ajustes avançados')
@@ -198,7 +230,8 @@ def build_workbench(self):
         column.addWidget(label(unit, 'Subtitle'))
         metrics.addWidget(card, 0, i)
         self.metrics[key], self.metric_cards[key] = value, card
-    self.metric_cards['delta'].setToolTip('Diferença ideal entre trechos vizinhos, antes do arredondamento. Use os valores da tabela para o corte.')
+    self.delta_caption = self.metric_cards['delta'].findChild(type(self.metrics['delta']), 'MetricName')
+    self.metric_cards['delta'].setToolTip('Correção de tilt por nível. No divisor central, os comprimentos também diferem por ondas inteiras. Use a tabela para cortar.')
     content.addLayout(metrics)
     self.answer = label('', 'Answer', True)
     self.answer.setTextFormat(Qt.TextFormat.PlainText)
@@ -234,6 +267,14 @@ def build_workbench(self):
     visuals.addWidget(self.result_detail_stack)
     visuals.setSizes([280, 620])
     self.result_tabs.addTab(visuals, 'Resultado')
+    central_page = QWidget()
+    central_layout = QVBoxLayout(central_page)
+    self.central_summary = label('', 'Answer', True)
+    central_layout.addWidget(self.central_summary)
+    self.central_table = table(['Antena', 'Posição / divisor\n(mm)', 'Percurso mínimo\n(mm)', 'Base\n(λg)', 'Correção tilt\n(mm)', 'λg adicionados', 'Corte final\n(mm)'])
+    central_layout.addWidget(self.central_table, 1)
+    central_layout.addWidget(label('Base + correção de tilt + λg inteiros = comprimento ideal; depois aplica-se o passo de corte. λg adicionados incluem alcance físico e reserva. Medidas de malha a malha.', 'Subtitle', True))
+    self.central_tab_index = self.result_tabs.addTab(central_page, 'Divisor central')
     cut_page = QWidget()
     cut_layout = QVBoxLayout(cut_page)
     self.lengths = LengthIllustration()

@@ -218,6 +218,77 @@ usam isotrópico e planos elétricos de referência, evitando reinterpretar medi
 antigas como malha a malha. A UI informa essa condição e permite escolher o novo
 modelo antes de recalcular; o histórico não é reescrito.
 
+## Divisor central e comprimentos por lambda — 1.4.0
+
+Fonte: `Calculo de cabos para antena fm.ods`, aba `Plan1`, SHA-256
+`3d45fa6cd20bac11e39c8a39864fad7f331b8ccaf609715a0442ee3a62599bc1`.
+Foram lidos valores e fórmulas do XML ODS, sem executar macros ou instruções do arquivo.
+
+| Células | Grandeza |
+| --- | --- |
+| D2 / D3 | 105,3 MHz / VF 0,87 |
+| G2 | `300000 / D2 × D3`, λg em mm = 2478,63247863248 |
+| H2 | G2 / 4 = 619,65811965812 mm |
+| B6:B7 | 2 elementos: 3098,2905982906 mm nos dois ramais |
+| B10:B13 | 4 elementos: 5576,92307692308; 3098,2905982906; 3098,2905982906; 5576,92307692308 mm |
+| B16:B21 | 6 elementos: 8055,55555555556; 5576,92307692308; 3098,2905982906; sequência simétrica |
+
+A tabela auxiliar K6:P11 distingue RGC213 (0,82), LCF12 (0,88), SCF12/RFS
+(0,77), LCF12/RFS (0,87), SCF12/KING (0,83) e LCF78/KING/DATALINK (0,88).
+São referências da planilha, sem substituição automática do catálogo ADT-PY.
+O exemplo reproduz especificamente o VF 0,87 de D3; outros valores podem ser
+informados no campo de VF. O número OP-3405 e células auxiliares sem vínculo com
+as tabelas de ramais não são tratados como parâmetros RF.
+
+`feed_layout=center` é novo; `progressive` preserva o cálculo anterior.
+Para índices `i=0…N−1`, E1 inferior e divisor a `zc=q×d`, `q=(N−1)/2`:
+
+```text
+λ₀ = c/f                       λg = VF × λ₀
+base_i = (ceil(|i − q|) + 0,25) × λg
+correção_i = −(i − q) × VF × d × sen(tilt)
+percurso_mínimo_i = |(i − q) × d| + folga
+ideal_i = base_i + correção_i + k_i × λg
+```
+
+`k_i` é o menor inteiro não negativo que respeita o percurso mínimo antes e
+depois do arredondamento de corte, acrescido da reserva de ondas informada.
+O corte usa o mesmo arredondamento ao passo do motor anterior. O planejamento
+limita a um milhão as ondas necessárias ao alcance para rejeitar combinações
+numericamente inadequadas de VF, frequência e percurso.
+
+Os casos 2/4/6 sem tilt reproduzem a ODS quando o alcance não exige extensão.
+O espaçamento não aparece na planilha: 1 λ₀ é o padrão explícito do aplicativo,
+editável em mm ou como múltiplo de λ₀. Folga, tilt, 2–64 elementos e quantidades
+ímpares são extensões. Em quantidade ímpar, o elemento no centro usa base 0,25 λg.
+O percurso segue a distância vertical mais a folga fornecida; não reconstrói
+curvas, obstáculos, conectores nem raio mínimo do cabo.
+
+Fase física relativa = `−360° (L_i − L_0)/λg`. Removem-se voltas inteiras para
+expressá-la em torno da progressão solicitada, conservando o erro de corte.
+O ajuste de tilt usa essa fase equivalente, e não regressão sobre comprimentos
+que diferem por λg inteiros. As perdas sempre usam o comprimento físico completo.
+Sem tilt e sem arredondamento, todos os ramais têm a mesma fase, mesmo com
+comprimentos diferentes. A coerência pode cair por perdas desiguais e quantização.
+
+Essa equivalência vale na frequência calculada. Cada volta acrescenta atraso
+real, podendo alterar o diagrama em outras frequências. Supõem-se saídas do
+divisor em fase e terminações iguais. A parcela λg/4 reproduz a referência e
+não valida casamento de impedância ou um transformador de quarto de onda.
+
+Persistência: entradas versão **2**, snapshot versão **3**, motor **1.4.0**.
+O esquema SQLite permanece `user_version=1`, com novas propriedades no JSON.
+`result.center_feed` conserva altura do divisor, fração de fase e, por ramal,
+posição, percurso mínimo, base, correção e ondas adicionadas. `result.elements`
+conserva ideal, corte, diferenças, fase e potência. Snapshot e CSV incluem a
+decomposição; PDF e tela usam o mesmo resultado congelado. Entradas versão 1
+continuam aceitas e campos ausentes usam `progressive`, folga zero e reserva zero.
+Revisões históricas não são reescritas. A interface salva também `spacing_factor`.
+
+Fixture: `tests/fixtures/fm_center_reference.json`, valores ODS em mm, tolerância
+absoluta de `1e-8 mm`. Testes independentes propagam os fasores pelos cabos
+físicos e pelo espaço livre para verificar a coerência no tilt solicitado.
+
 ## Relatório e impressão
 
 O PDF A4 usa os últimos resultados calculados, com metadados, entradas, tabela

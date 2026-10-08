@@ -155,11 +155,12 @@ class ArrayIllustration(QWidget):
         w, h = self.width(), self.height()
         title = 'Cabos até as antenas' if self.kind == 'cable' else 'Linhas até as antenas'
         text(p, 20, 12, w-40, 25, title, 11, bold=True)
-        text(p, 20, 38, w-40, 22, 'Vista lateral · E1 inferior · esquema sem escala', 9, MUTED)
+        text(p, 20, 38, w-40, 22, 'E1 inferior · sem escala' if self.simple else 'Vista lateral · E1 inferior · esquema sem escala', 9, MUTED)
         if not self.result:
             return
         r, d = self.result, self.result.design
         top, bottom = 91, h-150 if self.simple else h-180
+        divider_y = (top+bottom)/2 if r.center_feed else bottom+52
         tower_x = min(190, w*0.38)
         panel_x = tower_x+24
         # Lattice mast: contextual geometry, never used in the RF calculation.
@@ -174,11 +175,11 @@ class ArrayIllustration(QWidget):
             y = bottom - (bottom-top)*i/(d.elements-1)
             color = QColor.fromHsv(225-int(35*i/(d.elements-1)), 190, 190).name()
             route_x = 40+display_i*9
-            path = QPainterPath(QPointF(44, bottom+45))
+            path = QPainterPath(QPointF(44, divider_y))
             if self.kind == 'cable':
                 path.cubicTo(QPointF(route_x-10, y), QPointF(route_x+10, y), QPointF(panel_x, y))
             else:
-                path.lineTo(route_x, bottom+45)
+                path.lineTo(route_x, divider_y)
                 path.lineTo(route_x, y)
                 path.lineTo(panel_x, y)
             p.setPen(QPen(QColor(color), 2.2))
@@ -189,20 +190,20 @@ class ArrayIllustration(QWidget):
             p.drawRoundedRect(QRectF(panel_x, y-15, 38, 30), 4, 4)
             for shift in (8, 15, 22, 29):
                 line(p, panel_x+shift, y-8, panel_x+shift, y+8, color, 1.5)
-            text(p, panel_x+49, y-22, w-panel_x-58, 23,
+            text(p, panel_x+49, y-11 if self.simple else y-22, w-panel_x-58, 23,
                  f'E{e.number}' if self.simple else f'E{e.number}   {e.length_m*1000:.1f} mm', 11 if self.simple else 10, color, True)
-            if self.simple:
-                position = 'Mais baixa' if i == 0 else 'Mais alta' if i == d.elements-1 else ''
-                text(p, panel_x+49, y, w-panel_x-58, 19, position, 9, MUTED)
-            else:
+            if not self.simple:
                 text(p, panel_x+49, y, w-panel_x-58, 19, f'φ {e.relative_phase_deg:+.2f}°', 9, MUTED)
         p.setBrush(QColor('#142f53'))
         p.setPen(Qt.PenStyle.NoPen)
-        p.drawRoundedRect(QRectF(24, bottom+35, 87, 34), 5, 5)
-        text(p, 28, bottom+35, 79, 34, f'Divisor 1:{d.elements}', 9, 'white', True,
+        p.drawRoundedRect(QRectF(24, divider_y-17, 87, 34), 5, 5)
+        text(p, 28, divider_y-17, 79, 34, f'Divisor 1:{d.elements}', 9, 'white', True,
              Qt.AlignmentFlag.AlignCenter)
-        text(p, 127, bottom+37, w-140, 31,
-             'Do transmissor às antenas' if self.simple else f'd = {d.spacing_m*1000:.1f} mm   ·   θ = {d.tilt_deg:+.2f}°', 9, BLUE)
+        if r.center_feed:
+            text(p, 20, bottom+32, w-40, 42, f'Divisor no centro\n{r.center_feed.divider_height_m:.3f} m acima de E1'.replace('.', ','), 9, BLUE)
+        else:
+            text(p, 127, bottom+37, w-140, 31,
+                 'Do transmissor às antenas' if self.simple else f'd = {d.spacing_m*1000:.1f} mm   ·   θ = {d.tilt_deg:+.2f}°', 9, BLUE)
         if d.elements > 8:
             text(p, 20, 65, w-40, 18, f'8 das {d.elements} antenas; todas estão na tabela.', 8, MUTED)
         if self.simple:

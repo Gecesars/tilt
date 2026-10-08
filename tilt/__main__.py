@@ -20,9 +20,12 @@ def main():
     parser.add_argument('--smoke-test', action='store_true', help='Abre e encerra após a primeira renderização')
     parser.add_argument('--smoke-pdf', type=Path, help='Com --smoke-test, gera um PDF de exemplo e testa sua prévia; não imprime')
     parser.add_argument('--smoke-diagnostics', type=Path, help='Com --smoke-test, grava versões e caminhos locais das DLLs carregadas')
+    parser.add_argument('--smoke-center', action='store_true', help='Com --smoke-test e --database, testa o exemplo FM e seu salvamento')
     args = parser.parse_args()
     if (args.smoke_pdf or args.smoke_diagnostics) and not args.smoke_test:
         parser.error('--smoke-pdf e --smoke-diagnostics requerem --smoke-test')
+    if args.smoke_center and (not args.smoke_test or not args.database):
+        parser.error('--smoke-center requer --smoke-test e --database para usar um banco de teste explícito')
     app = QApplication(sys.argv[:1])
     # Windows' offscreen Qt plugin does not enumerate fonts. Keep diagnostic
     # PDFs readable while native Windows continues to use its normal font set.
@@ -43,6 +46,17 @@ def main():
     window = MainWindow(db)
     window.show()
     if args.smoke_test:
+        if args.smoke_center:
+            window.load_central_example()
+            if window.result is None:
+                db.close()
+                return 4
+            window.save_project()
+            record = db.project(db.projects()[0]['id'])
+            window.restore_payload(record['payload'], record['title'])
+            if not window.run_calculation() or window.result.center_feed is None:
+                db.close()
+                return 4
         if window.result is None:
             db.close()
             return 2

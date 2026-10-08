@@ -97,7 +97,7 @@ def test_saved_revision_contains_fabrication_ratings_samples_and_diagram(window,
     window.save_project()
     record = window.db.project(window.db.projects()[0]['id'])
     saved = record['snapshot']
-    assert saved['schema_version'] == 2
+    assert saved['schema_version'] == 3
     assert saved['result']['line_specification']['average_power_w'] == r.line_specification.average_power_w
     assert saved['fabrication']['rows'][-1]['delta_e1_mm'] == r.elements[-1].delta_e1_m*1000
     assert saved['diagram']['element_pattern'] == 'half_wave_vertical'

@@ -9,7 +9,11 @@ from .specification import LineSpecification
 
 C_SI = 299_792_458.0
 C_WORKSHEET = 300_000_000.0
-ENGINE_VERSION = '1.2.0'
+ENGINE_VERSION = '1.4.0'
+FEED_LAYOUTS = {
+    'progressive': 'Ramal mínimo informado',
+    'center': 'Divisor no centro (λg)',
+}
 ELEMENT_PATTERNS = {
     'half_wave_vertical': 'Dipolo vertical de meia onda (aproximação)',
     'isotropic': 'Isotrópico — somente fator de arranjo',
@@ -79,10 +83,13 @@ class Design:
     speed_m_s: float = C_WORKSHEET
     element_pattern: str = 'isotropic'
     length_reference: str = 'electrical_planes'
+    feed_layout: str = 'progressive'
+    route_extra_m: float = 0.0
+    reserve_wavelengths: int = 0
 
     def validate(self):
         for name, value in asdict(self).items():
-            if name in ('element_pattern', 'length_reference'):
+            if name in ('element_pattern', 'length_reference', 'feed_layout'):
                 continue
             if name == 'attenuation_db_100m' and value is None:
                 continue
@@ -91,6 +98,12 @@ class Design:
             raise ValueError('Diagrama do elemento inválido.')
         if self.length_reference not in LENGTH_REFERENCES:
             raise ValueError('Referência de comprimento inválida.')
+        if self.feed_layout not in FEED_LAYOUTS:
+            raise ValueError('Posição do divisor inválida.')
+        if not 0 <= self.route_extra_m <= 10_000:
+            raise ValueError('Folga de percurso: use de 0 a 10.000 m por ramal.')
+        if type(self.reserve_wavelengths) is not int or not 0 <= self.reserve_wavelengths <= 100:
+            raise ValueError('Reserva de λg: use um inteiro entre 0 e 100.')
         if type(self.elements) is not int or not 2 <= self.elements <= 64:
             raise ValueError('Quantidade de elementos: use um inteiro entre 2 e 64.')
         if not 0.1 <= self.frequency_mhz <= 100_000:
@@ -130,6 +143,61 @@ class Element:
 
 
 @dataclass(frozen=True)
+class CenterBranch:
+    number: int
+    offset_from_divider_m: float
+    minimum_route_m: float
+    base_wavelengths: float
+    base_length_m: float
+    tilt_correction_m: float
+    added_wavelengths: int
+
+
+@dataclass(frozen=True)
+class CenterFeed:
+    divider_height_m: float
+    phase_fraction: float
+    branches: tuple[CenterBranch, ...]
+
+
+def rounded_cut(length, step):
+    return math.floor(length / step + 0.5 + 1e-10) * step if step else length
+
+
+def center_feed_lengths(d, guided, delta, step):
+    """ODS shell lengths, with physical reach and phase-preserving full turns.
+
+    Equal-phase splitter outputs and equal termination delays are assumed.
+    The ODS supplies (1.25, 2.25, 3.25)*lambda_g for 2/4/6 bays without tilt.
+    Odd counts, tilt, route allowance and reach extension are explicit additions.
+    """
+    center = (d.elements - 1) / 2
+    rows, lengths = [], []
+    for i in range(d.elements):
+        offset = (i-center)*d.spacing_m
+        minimum = abs(offset)+d.route_extra_m
+        waves = math.ceil(abs(i-center))+.25
+        base = waves*guided
+        correction = -(i-center)*delta
+        target = base+correction
+        # Both the ideal route and its rounded fabrication length must reach.
+        threshold = minimum
+        if step:
+            threshold = max(threshold, (math.ceil(minimum/step)-.5)*step)
+        ratio = (threshold-target)/guided if guided > 0 else math.inf
+        if not math.isfinite(ratio) or ratio > 1_000_000:
+            raise ValueError('Percurso exige mais de um milhão de λg. Revise frequência, VF e medidas.')
+        added = max(0, math.ceil(ratio-1e-10))+d.reserve_wavelengths
+        ideal = target+added*guided
+        if ideal < minimum-1e-10 or rounded_cut(ideal, step) < minimum-1e-10:
+            added += 1
+            ideal = target+added*guided
+        rows.append(CenterBranch(i+1, offset, minimum, waves, base, correction, added))
+        lengths.append(ideal)
+    return lengths, CenterFeed(center*d.spacing_m, .25, tuple(rows))
+
+
+@dataclass(frozen=True)
 class Result:
     design: Design
     wavelength_m: float
@@ -146,6 +214,7 @@ class Result:
     grating_angles_deg: tuple[float, ...]
     warnings: tuple[str, ...]
     line_specification: LineSpecification | None = None
+    center_feed: CenterFeed | None = None
 
 
 def calculate(design: Design) -> Result:
@@ -156,16 +225,24 @@ def calculate(design: Design) -> Result:
     sine = math.sin(math.radians(d.tilt_deg))
     delta = d.velocity_factor * d.spacing_m * sine
     phase = 360 * d.spacing_m / wavelength * sine
-    raw = [-i * delta for i in range(d.elements)]
-    ideal = [d.shortest_branch_m + v - min(raw) for v in raw]
     step = d.cut_step_mm / 1000
-    lengths = [math.floor(v / step + 0.5 + 1e-10) * step if step else v for v in ideal]
+    center_feed = None
+    if d.feed_layout == 'center':
+        ideal, center_feed = center_feed_lengths(d, guided, delta, step)
+    else:
+        raw = [-i * delta for i in range(d.elements)]
+        ideal = [d.shortest_branch_m + v - min(raw) for v in raw]
+    lengths = [rounded_cut(v, step) for v in ideal]
     common_loss = (d.attenuation_db_100m * d.common_feeder_m / 100 + d.extra_loss_db
                    if d.attenuation_db_100m is not None else None)
     rows, amps, errors = [], [], []
     for i, (actual, target) in enumerate(zip(lengths, ideal)):
         actual_phase = -360 * (actual - lengths[0]) / guided
         error = actual_phase - i * phase
+        if center_feed:
+            # Remove only full electrical turns, retaining the requested slope.
+            error = math.remainder(error, 360)
+            actual_phase = i*phase+error
         loss = (common_loss + actual * d.attenuation_db_100m / 100
                 if common_loss is not None else None)
         power = d.input_power_w / d.elements * 10 ** (-loss / 10) if loss is not None else None
@@ -191,6 +268,9 @@ def calculate(design: Design) -> Result:
     center = (d.elements - 1) / 2
     slope = sum((i-center) * v for i, v in enumerate(lengths)) / sum((i-center)**2 for i in range(d.elements))
     fitted_sine = -slope / (d.velocity_factor * d.spacing_m)
+    if center_feed:
+        slope_phase = math.fsum((i-center)*row.relative_phase_deg for i, row in enumerate(rows)) / sum((i-center)**2 for i in range(d.elements))
+        fitted_sine = slope_phase*wavelength/(360*d.spacing_m)
     fitted = math.degrees(math.asin(fitted_sine)) if abs(fitted_sine) <= 1 else None
     # Ideal uniform-array alias directions, reported as elevation (positive upwards).
     grating = []
@@ -206,14 +286,18 @@ def calculate(design: Design) -> Result:
         warnings.append('O fator de arranjo admite lóbulos de grade. O nível no diagrama completo depende do padrão de cada antena.')
     if d.attenuation_db_100m is None:
         warnings.append('Atenuação não informada: eficiência de alimentação e potência entregue indisponíveis.')
-    if d.shortest_branch_m == 0:
+    if d.shortest_branch_m == 0 and not center_feed:
         warnings.append('Ramal mínimo zero: verifique o percurso físico até cada elemento.')
+    if center_feed:
+        warnings.append('Comprimentos equivalentes em fase somente na frequência calculada; conferir fase nas extremidades da faixa de operação.')
+        if any(row.added_wavelengths > d.reserve_wavelengths for row in center_feed.branches):
+            warnings.append('Foram acrescentados múltiplos inteiros de λg para alcançar as antenas e respeitar o passo de corte.')
     if fitted is None or abs(fitted - d.tilt_deg) > 0.1:
         warnings.append('O passo de corte altera a progressão de tilt em mais de 0,1° ou impede sua realização.')
     return Result(d, wavelength, guided, delta, phase, d.spacing_m*sine/d.speed_m_s*1e9,
                   fitted, efficiency, coherence, total,
                   equivalent_loss,
-                  tuple(rows), tuple(grating), tuple(warnings))
+                  tuple(rows), tuple(grating), tuple(warnings), center_feed=center_feed)
 
 
 def array_pattern(result: Result, angles=None, untilted=False):
