@@ -10,7 +10,7 @@
 - Após conferir o arquivo, **Salvar cálculo e instalar** recalcula os campos atuais,
   salva uma revisão no SQLite e abre o assistente. Entrada inválida, banco indisponível
   ou falha ao iniciar o instalador mantêm o aplicativo aberto.
-- O instalador aguarda o processo terminar, reaproveita a pasta registrada e
+- O aplicativo encerra após abrir o assistente; o instalador reaproveita a pasta registrada e
   conserva o banco. Mantém aceite da licença e interação normal do assistente.
 - Ao terminar, abrir **EFTX Tilt Desktop**. Não há instalação silenciosa implícita.
 - Erros na consulta automática não abrem modais; o menu permite tentar novamente.
@@ -28,7 +28,9 @@ não são ignorados. Downloads usam HTTPS e só aceitam redirecionamento para
 
 Endpoint fixo: `https://api.github.com/repos/Gecesars/tilt/releases/latest`.
 Exige `draft=false`, `prerelease=false`, tag `vMAJOR.MINOR.PATCH` (ou sem `v`),
-URL do repositório exato e um único asset `EFTX_Tilt-VERSAO-Setup-x64.exe`.
+URL do repositório exato e um único asset `EFTX_Tilt-VERSAO-Windows-x64.msi`.
+Na ausência de MSI, aceita `EFTX_Tilt-VERSAO-Setup-x64.exe` de releases anteriores.
+Um MSI presente com metadados inválidos não permite fallback para EXE.
 O asset deve estar `uploaded`, declarar tamanho de 1 a 512 MiB e
 `digest=sha256:<64 dígitos hexadecimais>`. Metadados limitados a 1 MiB;
 consulta limitada a 20 s, inatividade da transferência a 30 s e download total
@@ -40,11 +42,15 @@ O SHA informado pelo próprio GitHub comprova integridade de transporte, não
 substitui assinatura digital do editor nem protege contra comprometimento do
 repositório. A distribuição continua sem assinatura digital.
 
-Somente o caminho gerado localmente e `/WAITPID=<processo atual>` entram no
-lançador, sem shell ou argumentos da release. O NSIS aguarda até 60 s; se o app
-não encerrar, aborta antes de copiar. Downloads cancelados, inválidos e recusados
-são removidos; o EXE entregue ao instalador fica no cache para não interromper
-sua inicialização. Releases futuras devem preservar esse contrato de espera.
+O MSI é aberto pelo `System32/msiexec.exe` com `/i`, `/norestart` e log local,
+sem shell ou argumentos recebidos da release. O assistente mantém o aceite da
+licença e a detecção de arquivos em uso. Downloads cancelados, inválidos e
+recusados são removidos; o instalador entregue fica no cache para reparação.
+
+O EXE auxiliar 1.4.1 contém esse mesmo MSI para o atualizador EXE da edição 1.4.0.
+Esse caminho continua aceitando `/WAITPID=<processo atual>`: aguarda até 60 s
+antes de iniciar o MSI e aborta se o aplicativo não encerrar. Não aceita
+silenciosamente a licença durante o fluxo normal do atualizador.
 
 Fontes oficiais: [API de releases GitHub](https://docs.github.com/en/rest/releases/releases#get-the-latest-release),
 [redirecionamento e timeout Qt](https://doc.qt.io/qt-6/qnetworkrequest.html),
@@ -70,15 +76,16 @@ atualizações, publicar uma versão maior, por exemplo 1.4.1.
 limites, erro HTTP/TLS, timeout, cancelamento, consentimento, recusa, salvar antes
 de iniciar e preservação do app quando o salvamento ou lançamento falha.
 
-`tools/test_setup.ps1` instala o EXE, testa o app congelado, verifica `/WAITPID`
-com processo real e desinstala. `-CheckUpdates` também consulta e baixa a release
+`tools/test_installer.ps1` instala o MSI, testa o app congelado, repara e desinstala.
+`-FromExe 1.4.0 -UseBridge` verifica `/WAITPID` com o app antigo em execução.
+`-CheckUpdates` também consulta e baixa a release
 pública pelo aplicativo instalado, valida SHA-256 e remove o download; **nunca
 executa o arquivo baixado nesse diagnóstico**. O parâmetro é opcional porque
 depende da rede e do limite público de consultas do GitHub.
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q
-powershell -ExecutionPolicy Bypass -File .\tools\test_setup.ps1 -CheckUpdates
+powershell -ExecutionPolicy Bypass -File .\tools\test_installer.ps1 -CheckUpdates
 ```
 
 Evidência datada e limitações: [validação](validacao.md).

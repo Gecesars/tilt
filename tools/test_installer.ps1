@@ -8,7 +8,7 @@ $tiltRun = Join-Path $tiltRoot ('.artifacts\msi-test-' + [Guid]::NewGuid().ToStr
 $tiltInstall = Join-Path $tiltRun 'installed'
 New-Item -ItemType Directory -Path $tiltRun | Out-Null
 $tiltInstaller = New-Object -ComObject WindowsInstaller.Installer
-if ($UpgradeFrom -and $FromExe) { throw 'Choose MSI or EXE upgrade source.' }
+$tiltOldInstall = if ($UpgradeFrom -and $FromExe) { Join-Path $tiltRun 'previous-msi' } else { $tiltInstall }
 if ($UseBridge -and -not $FromExe) { throw 'Bridge test requires a legacy EXE installation in the test directory.' }
 if (Test-Path 'HKCU:\Software\EFTX\TiltSetup') { throw 'An EXE installation already exists. Use a test account.' }
 foreach ($tiltRelated in $tiltInstaller.RelatedProducts('{69BB6A93-58DF-488F-B5C8-5D88112A3E6D}')) {
@@ -76,9 +76,9 @@ try {
     $tiltInstallExtra = "EFTX_ACCEPT_LICENSE=1 INSTALLFOLDER=`"$tiltInstall`""
     if ($UpgradeFrom) {
         $tiltResults.upgrade_from = $UpgradeFrom
-        $tiltResults.install_previous = Invoke-Msi '/i' $tiltOldMsi $tiltInstallExtra 'install-previous.log'
+        $tiltResults.install_previous = Invoke-Msi '/i' $tiltOldMsi "EFTX_ACCEPT_LICENSE=1 INSTALLFOLDER=`"$tiltOldInstall`"" 'install-previous.log'
         if ($tiltResults.install_previous -notin @(0,3010)) { throw 'Falha ao instalar versao anterior.' }
-        'user-owned fixture' | Set-Content -LiteralPath "$tiltInstall\user-added.txt"
+        'user-owned fixture' | Set-Content -LiteralPath "$tiltOldInstall\user-added.txt"
         # Exercise remembered custom location; no INSTALLFOLDER on upgrade.
         $tiltInstallExtra = 'EFTX_ACCEPT_LICENSE=1'
     }
@@ -96,14 +96,34 @@ try {
         $tiltInstallExtra = 'EFTX_ACCEPT_LICENSE=1'
     }
     if ($UseBridge) {
-        $tiltResults.install = Invoke-Exe (Join-Path $tiltRoot "dist\EFTX_Tilt-$Version-Setup-x64.exe") '/S /ACCEPTEULA=1'
+        # Exercise the exact EXE-only updater contract with the old app alive.
+        $env:QT_QPA_PLATFORM = 'offscreen'
+        $tiltLive = Start-Process -FilePath "$tiltInstall\EFTX_Tilt.exe" -ArgumentList "--smoke-test --smoke-delay-ms 8000 --database `"$tiltRun\waitpid.sqlite3`"" -WindowStyle Hidden -PassThru
+        $tiltPendingSetup = $null
+        try {
+            Start-Sleep -Seconds 2
+            $tiltPendingSetup = Start-Process -FilePath (Join-Path $tiltRoot "dist\EFTX_Tilt-$Version-Setup-x64.exe") -ArgumentList "/S /ACCEPTEULA=1 /WAITPID=$($tiltLive.Id)" -WindowStyle Hidden -PassThru
+            Start-Sleep -Seconds 2
+            $tiltPendingSetup.Refresh()
+            if ($tiltLive.HasExited -or $tiltPendingSetup.HasExited -or $tiltInstaller.ProductState($tiltProduct) -eq 5) { throw 'Bridge did not wait for old app exit.' }
+            if (-not $tiltLive.WaitForExit(15000)) { throw 'Test app did not exit.' }
+            if (-not $tiltPendingSetup.WaitForExit(90000)) { throw 'Bridge did not finish.' }
+            $tiltPendingSetup.Refresh()
+            $tiltResults.install = $tiltPendingSetup.ExitCode
+            $tiltResults.waitpid = 'waited for old application and resumed'
+        } finally {
+            if (-not $tiltLive.HasExited) { $tiltLive.Kill() }
+            if ($tiltPendingSetup -and -not $tiltPendingSetup.HasExited) { $tiltPendingSetup.Kill() }
+            $env:QT_QPA_PLATFORM = $tiltOldPlatform
+        }
     } else {
         $tiltResults.install = Invoke-Msi '/i' $tiltMsi $tiltInstallExtra 'install.log'
     }
     if ($tiltResults.install -notin @(0,3010)) { throw "Falha de instalação: $($tiltResults.install)" }
     if ($UpgradeFrom) {
         if ($tiltInstaller.ProductState($tiltOldProduct) -ne -1) { throw 'Versao anterior ainda registrada.' }
-        if ((Get-Content -LiteralPath "$tiltInstall\user-added.txt" -Raw).Trim() -ne 'user-owned fixture') { throw 'Arquivo extra perdido no upgrade.' }
+        if ((Get-Content -LiteralPath "$tiltOldInstall\user-added.txt" -Raw).Trim() -ne 'user-owned fixture') { throw 'Arquivo extra perdido no upgrade.' }
+        if ($FromExe -and (Test-Path -LiteralPath "$tiltOldInstall\EFTX_Tilt.exe")) { throw 'Old MSI payload remains after migration to EXE folder.' }
         foreach ($tiltObsolete in @('ucrtbase.dll','api-ms-win-core-file-l1-1-0.dll','libssl-3-x64.dll')) {
             if (Test-Path -LiteralPath "$tiltInstall\_internal\$tiltObsolete") { throw "DLL obsoleta preservada: $tiltObsolete" }
         }
@@ -161,7 +181,7 @@ try {
     }
     if ($tiltOldProduct -and $tiltInstaller.ProductState($tiltOldProduct) -eq 5) {
         $tiltRegisteredPath = (Get-ItemProperty 'HKCU:\Software\EFTX\Tilt').InstallLocation
-        if ($tiltRegisteredPath.TrimEnd('\') -ne $tiltInstall) { throw 'Local da versao anterior mudou; limpeza cancelada.' }
+        if ($tiltRegisteredPath.TrimEnd('\') -ne $tiltOldInstall) { throw 'Local da versao anterior mudou; limpeza cancelada.' }
         $tiltResults.uninstall_previous = Invoke-Msi '/x' $tiltOldProduct '' 'uninstall-previous.log'
     }
     if (Test-Path 'HKCU:\Software\EFTX\TiltSetup') {

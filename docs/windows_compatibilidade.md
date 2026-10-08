@@ -1,8 +1,8 @@
-# Compatibilidade Windows — EFTX Tilt 1.4.0
+# Compatibilidade Windows — EFTX Tilt 1.4.1
 
 ## Plataforma de destino
 
-Aplicativo, ZIP portátil e instalador EXE são destinados a **Windows 10 versão
+Aplicativo, ZIP portátil, instalador MSI e EXE auxiliar são destinados a **Windows 10 versão
 1809 ou posterior, x64 (64 bits)**, e Windows 11 x64. O mínimo é o build 17763.
 Windows 10 22H2 (19045), LTSC 2019 (17763) e LTSC 2021 (19044) estão dentro dessa
 faixa. Windows 7/8/8.1, Windows 10 anterior a 1809 e processos x86 de 32 bits
@@ -33,8 +33,9 @@ Windows 10. O estado dos testes está separado abaixo.
 3. O backend OpenSSL opcional do Qt foi excluído. Qt Network mantém Schannel,
    fornecido pelo Windows. As bibliotecas OpenSSL próprias do Python permanecem.
    A aplicação não solicita instalação de bibliotecas adicionais pelo usuário.
-4. O EXE lê `CurrentBuildNumber` do Registro na visão de 64 bits e exige
-   build >= 17763. Instala por usuário, sem MSI, .NET ou download de pré-requisitos.
+4. O MSI lê `CurrentBuildNumber` do Registro na visão de 64 bits e exige
+   build >= 17763. Instala por usuário, sem .NET ou download de pré-requisitos.
+   O EXE auxiliar incorpora e abre o mesmo MSI.
 5. O aplicativo verifica o build real reportado pelo Python e a arquitetura do
    processo antes de importar Qt, incluindo a distribuição portátil. Sistemas
    abaixo do mínimo recebem uma mensagem de requisito, em vez de tentar carregar

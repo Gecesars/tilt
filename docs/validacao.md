@@ -1,5 +1,41 @@
 # Evidências de validação
 
+## MSI e migração 1.4.1 — 08/10/2026
+
+- **232 testes aprovados**. Inclui escolha prioritária do MSI, rejeição de
+  metadados inválidos, integridade SHA-256 e comando nativo do Windows Installer.
+- Windows 11 x64 build **26300**: instalação limpa, aceite obrigatório,
+  reparação e desinstalação; atualização do MSI **1.3.1** com reaproveitamento
+  de pasta personalizada e bloqueio de downgrade; migração do EXE **1.4.0**
+  tanto pelo MSI direto quanto pelo EXE auxiliar.
+- Coexistência de MSI 1.3.1 e EXE 1.4.0 em pastas diferentes: consolidada na
+  pasta do EXE, com remoção do produto MSI antigo e preservação dos arquivos
+  extras nos dois diretórios. Instalação, reparação e remoção retornaram zero.
+- Cada instalação confere **233 arquivos por SHA-256**, calcula o divisor
+  central, salva/reabre SQLite e gera PDF nos plugins Qt offscreen e Windows.
+  Ambiente sem Python/Qt no PATH e diagnóstico sem runtime redistribuível externo.
+  Banco existente e arquivos extras preservados após instalação/remoção.
+- O EXE auxiliar foi testado com o aplicativo 1.4.0 em execução: aguardou
+  `/WAITPID`, continuou após o encerramento normal e migrou para MSI. A cópia
+  do MSI mantida no cache tem o mesmo SHA-256 do artefato publicado.
+- O mesmo conjunto básico passou no [GitHub Actions](https://github.com/Gecesars/tilt/actions/runs/37802967497)
+  em um ambiente Windows separado. O workflow também mantém regressões de
+  migração, espera pelo processo e coexistência dos instaladores antigos.
+- Um probe NSIS reproduziu erro residual após `/WAITPID=` ausente: arquivo
+  copiado e código de falha. A release usa o MSI para copiar o aplicativo e
+  limpa o indicador de erro nas operações NSIS remanescentes.
+
+O primeiro teste local de migração EXE foi inconclusivo porque o contexto da
+ferramenta de desenvolvimento e o serviço MSI enxergavam registros diferentes.
+A busca reconheceu a versão antiga ao executar no contexto normal do Windows;
+os testes completos de migração foram então repetidos nesse contexto e no CI.
+Não foi necessário alterar Registro, permissões ou serviços do sistema para isso.
+
+Limites: sem máquina Windows 10 real, assinatura digital ou impressão física.
+O controle automatizado dos cliques do assistente MSI foi bloqueado pela
+ferramenta de UI; as instalações completas foram exercitadas pela linha de
+comando. O CI Windows Server não equivale a Windows 10 cliente.
+
 ## Atualizador incluído na release 1.4.0 — 08/10/2026
 
 - **229 testes aprovados** (`python -m pytest -q`), incluindo os testes RF
