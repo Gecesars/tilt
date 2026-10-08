@@ -19,7 +19,7 @@ def generate_lists(payload, output):
         relative = Path(item['path'])
         name = nsis_escape(str(relative))
         parent = nsis_escape(str(relative.parent))
-        install.extend([f'SetOutPath "$INSTDIR\\{parent}"',
+        install.extend(['ClearErrors', f'SetOutPath "$INSTDIR\\{parent}"',
                         f'File "${{PAYLOAD}}\\{name}"', 'IfErrors install_failed'])
         uninstall.extend([f'Delete "$INSTDIR\\{name}"',
                           f'IfFileExists "$INSTDIR\\{name}" uninstall_failed'])

@@ -21,7 +21,28 @@ jobs:
         run: |
           python -m venv .venv
           .\.venv\Scripts\python.exe -m pip install -e '.[dev]'
-      - name: Build offline EXE
+      - name: Build offline MSI and compatibility EXE
         run: .\build_setup.ps1
-      - name: Install, run PDF preview, reinstall and uninstall
-        run: .\tools\test_setup.ps1
+      - name: Install MSI, run PDF preview, repair and uninstall
+        run: .\tools\test_installer.ps1
+      - name: Download pinned previous EXE for migration test
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri 'https://github.com/Gecesars/tilt/releases/download/v1.4.0/EFTX_Tilt-1.4.0-Setup-x64.exe' -OutFile 'dist/EFTX_Tilt-1.4.0-Setup-x64.exe'
+          if ((Get-FileHash 'dist/EFTX_Tilt-1.4.0-Setup-x64.exe').Hash -ne '2a89929c7d03681a8fdaa033b526cc45e7c4d11b62842ccd703035244dea3c91') { throw 'Legacy fixture hash mismatch.' }
+          Invoke-WebRequest -Uri 'https://github.com/Gecesars/tilt/releases/download/v1.3.1/EFTX_Tilt-1.3.1-Windows-x64.msi' -OutFile 'dist/EFTX_Tilt-1.3.1-Windows-x64.msi'
+          if ((Get-FileHash 'dist/EFTX_Tilt-1.3.1-Windows-x64.msi').Hash -ne 'b172417c2073f1c1663a6902202383e65f5225f6731d5414bc20379d2efa1677') { throw 'Legacy MSI hash mismatch.' }
+      - name: Upgrade MSI 1.3.1 and reject downgrade
+        run: .\tools\test_installer.ps1 -UpgradeFrom 1.3.1
+      - name: Migrate EXE 1.4.0 using the MSI directly
+        run: .\tools\test_installer.ps1 -FromExe 1.4.0
+      - name: Migrate EXE 1.4.0 through the MSI compatibility bridge
+        run: .\tools\test_installer.ps1 -FromExe 1.4.0 -UseBridge
+      - name: Preserve installer test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-test-evidence
+          path: |
+            .artifacts/msi-test-*/results.json
+            .artifacts/msi-test-*/*.log

@@ -54,6 +54,14 @@ def test_installer_has_explicit_silent_acceptance_and_preserves_database_locatio
     assert 'EFTX_ACCEPT_LICENSE = &quot;1&quot;' in source
     assert 'WixUILicenseRtf' in source
     assert 'Advertise="yes"' not in source
-    assert 'RemoveFile' not in source and 'tilt.sqlite3' not in source
+    assert 'tilt.sqlite3' not in source
+    ns = {'w': 'http://wixtoolset.org/schemas/v4/wxs'}
+    tree = ET.fromstring(source)
+    removed = tree.findall('.//w:RemoveFile', ns)
+    assert {item.attrib['Name'] for item in removed} == {'Desinstalar.exe', '.eftx-install.ini', 'Desinstalar.lnk'}
+    assert all(item.attrib['On'] == 'install' for item in removed)
+    assert 'EFTX_EXE_FOLDER' in source and 'EFTX_EXE_VERSION' in source
+    assert '69BB6A93-58DF-488F-B5C8-5D88112A3E6D' in source
+    assert 'REINSTALLMODE" Value="amus' in source
     manifest = json.loads((root/'dotnet-tools.json').read_text(encoding='utf-8'))
     assert manifest['tools']['wix']['version'] == '5.0.2'

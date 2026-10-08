@@ -10,8 +10,8 @@ Identidade visual: logo **EFTX ANTENNAS** fornecido pelo usuário.
   11 x64. Inclui Windows 10 22H2 e LTSC 2019/2021. Consulte a
   [compatibilidade e seus limites de validação](docs/windows_compatibilidade.md).
 - Ambiente preparado: abra **`iniciar.cmd`**.
-- Baixe o **instalador EXE offline para Windows x64** em [Releases](https://github.com/Gecesars/tilt/releases).
-  Leia e aceite a licença, escolha a pasta e conclua. O programa cria atalhos no
+- Baixe o **instalador MSI offline 1.4.1 para Windows x64** em [Releases](https://github.com/Gecesars/tilt/releases).
+  Feche o aplicativo, leia e aceite a licença e conclua. O programa cria atalhos no
   menu Iniciar e na área de trabalho, com o nome **EFTX Tilt Desktop**.
   Python, Qt, SQLite e runtime Visual C++ estão incluídos; não há download
   de dependências durante a instalação.
@@ -32,12 +32,14 @@ Para definir outro banco:
 .\.venv\Scripts\python.exe -m tilt --database D:\projetos\meu_tilt.sqlite3
 ```
 
-O EXE instala para o usuário atual em `%LOCALAPPDATA%/Programs/EFTX/Tilt-Desktop`
+O MSI instala para o usuário atual em `%LOCALAPPDATA%/Programs/EFTX/Tilt-Desktop`
 por padrão. Reinstalar ou desinstalar preserva o banco no diretório de dados.
-Uma instalação MSI anterior pode permanecer; a nova versão usa os mesmos projetos
-e atalhos próprios, sem depender do estado do Windows Installer.
+Ele detecta MSIs anteriores e as edições EXE 1.3.2/1.4.0, reutiliza a pasta
+registrada e passa a gerenciar reparação e remoção pelo Windows Installer.
+O EXE auxiliar da release contém o mesmo MSI, para compatibilidade com o
+atualizador da versão 1.4.0.
 Consulte [instalação e empacotamento](docs/instalador.md) para uso silencioso,
-geração do EXE e validação de integridade. Esta distribuição não possui assinatura
+geração dos pacotes e validação de integridade. Esta distribuição não possui assinatura
 digital de editor.
 
 ## Atualizações do aplicativo
@@ -53,8 +55,8 @@ fecha e abre o instalador. Se o cálculo ou o salvamento falhar, a instalação
 é adiada. Reabra pelo atalho **EFTX Tilt Desktop** ao terminar.
 Os detalhes técnicos estão em [atualizações](docs/atualizacoes.md).
 
-Quem instalou a primeira edição 1.4.0 precisa baixar e executar novamente o EXE
-desta release para receber o atualizador. As próximas versões serão oferecidas
+Quem instalou a primeira edição 1.4.0 precisa baixar e executar o MSI 1.4.1
+para receber o atualizador. As próximas versões serão oferecidas
 pelo próprio aplicativo. A edição portátil usa o mesmo instalador por usuário
 ao aceitar a atualização; a pasta extraída não é substituída.
 

@@ -47,10 +47,13 @@ def parse_release(data):
     url = f'{REPOSITORY}/releases/tag/{tag}'
     if data.get('html_url') != url:
         raise ValueError('Origem da publicação inválida.')
-    filename = f'EFTX_Tilt-{version}-Setup-x64.exe'
     assets = data.get('assets')
     if not isinstance(assets, list):
         raise ValueError('Instalador indisponível nesta publicação.')
+    # Prefer MSI; keep EXE fallback for existing stable releases.
+    names = [f'EFTX_Tilt-{version}-Windows-x64.msi', f'EFTX_Tilt-{version}-Setup-x64.exe']
+    filename = next((name for name in names if any(isinstance(asset, dict) and asset.get('name') == name
+                                                for asset in assets)), names[0])
     matches = [asset for asset in assets if isinstance(asset, dict) and asset.get('name') == filename]
     if len(matches) != 1:
         raise ValueError('Instalador indisponível nesta publicação.')
@@ -78,15 +81,28 @@ def verify_installer(path, release):
     if path.name != release.filename or path.stat().st_size != release.size:
         raise ValueError('O instalador está incompleto. Faça o download novamente.')
     with path.open('rb') as stream:
-        if stream.read(2) != b'MZ':
+        signature = b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1' if path.suffix.lower() == '.msi' else b'MZ'
+        if stream.read(len(signature)) != signature:
             raise ValueError('O arquivo recebido não é um instalador Windows.')
         stream.seek(0)
         if hashlib.file_digest(stream, 'sha256').hexdigest() != release.sha256:
             raise ValueError('A integridade do instalador não foi confirmada. Faça o download novamente.')
 
 
+def installer_command(path):
+    path = Path(path).resolve()
+    if path.suffix.lower() == '.msi':
+        log_dir = Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppLocalDataLocation)) / 'logs'
+        log_dir.mkdir(parents=True, exist_ok=True)
+        # Native Windows Installer handles upgrade, repair, rollback and files
+        # in use. The interactive wizard cannot copy before the app exits.
+        return [str(Path(os.environ['SystemRoot'])/'System32'/'msiexec.exe'), '/i', str(path),
+                '/norestart', '/L*v', str(log_dir/f'update-{__version__}.log')]
+    return [str(path), f'/WAITPID={os.getpid()}']
+
+
 def launch_installer(path, release):
-    """Interactive wizard; its /WAITPID gate prevents replacing running DLLs."""
+    """Launch the interactive Windows Installer or the legacy-compatible bridge."""
     if sys.platform != 'win32':
         raise OSError('A instalação automática está disponível no Windows.')
     verify_installer(path, release)
@@ -95,7 +111,7 @@ def launch_installer(path, release):
     import ctypes
     ctypes.windll.kernel32.SetDllDirectoryW(None)
     try:
-        return subprocess.Popen([str(Path(path).resolve()), f'/WAITPID={os.getpid()}'],
+        return subprocess.Popen(installer_command(path),
                                 cwd=str(Path(path).resolve().parent), close_fds=True)
     finally:
         if getattr(sys, 'frozen', False):

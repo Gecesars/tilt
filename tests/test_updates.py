@@ -64,6 +64,39 @@ def test_reject_ambiguous_asset():
         parse_release(data)
 
 
+def test_msi_is_preferred_and_verified_without_weak_fallback(tmp_path):
+    data = metadata()
+    msi_content = b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1' + b'msi fixture'
+    asset = dict(data['assets'][0])
+    asset['name'] = 'EFTX_Tilt-1.5.0-Windows-x64.msi'
+    asset['browser_download_url'] = f'{updates.REPOSITORY}/releases/download/v1.5.0/{asset["name"]}'
+    asset['digest'] = 'sha256:' + hashlib.sha256(msi_content).hexdigest()
+    asset['size'] = len(msi_content)
+    data['assets'].append(asset)
+    release = parse_release(data)
+    assert release.filename.endswith('.msi')
+    path = tmp_path/release.filename
+    path.write_bytes(msi_content)
+    verify_installer(path, release)
+    path.write_bytes(b'MZ' + msi_content[2:])
+    with pytest.raises(ValueError, match='instalador Windows'):
+        verify_installer(path, release)
+    asset['digest'] = None
+    with pytest.raises(ValueError, match='integridade'):
+        parse_release(data)  # Never silently select EXE after a broken MSI.
+
+
+def test_msi_launch_uses_native_installer_and_explicit_log(tmp_path, monkeypatch):
+    monkeypatch.setenv('SystemRoot', 'C:\\Windows')
+    monkeypatch.setattr(updates.QStandardPaths, 'writableLocation', lambda *args: str(tmp_path/'user-data'))
+    path = tmp_path/'EFTX_Tilt-1.5.0-Windows-x64.msi'
+    command = updates.installer_command(path)
+    assert command[:3] == ['C:\\Windows\\System32\\msiexec.exe', '/i', str(path.resolve())]
+    assert '/norestart' in command and '/L*v' in command
+    assert '/qn' not in command and not any('ACCEPT_LICENSE' in value for value in command)
+    assert Path(command[-1]).parent.is_dir()
+
+
 @pytest.mark.parametrize('url', ['http://github.com/file', 'https://github.com.evil.test/file',
                                  'https://github.com@evil.test/file', 'https://user@github.com/file',
                                  'file:///C:/temp/update.exe', 'https://127.0.0.1/file',
@@ -220,7 +253,7 @@ def test_decline_update_never_downloads(window, monkeypatch):
     assert not called and controller.action.isEnabled()
 
 
-@pytest.mark.parametrize('version', ['1.3.2', '1.4.0'])
+@pytest.mark.parametrize('version', ['1.3.2', '1.4.0', '1.4.1'])
 def test_equal_and_older_versions_do_not_prompt(window, monkeypatch, version):
     def unexpected(*args):
         pytest.fail('Should not offer an equal/older version')

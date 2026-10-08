@@ -1,4 +1,4 @@
-# Componentes de terceiros — EFTX Tilt 1.4.0
+# Componentes de terceiros — EFTX Tilt 1.4.1
 
 A licença proprietária EFTX cobre apenas os componentes próprios. Os componentes
 abaixo conservam suas licenças e direitos originais. Os textos e avisos estão em

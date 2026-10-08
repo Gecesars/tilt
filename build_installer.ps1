@@ -1,5 +1,6 @@
 param([switch]$SkipApplicationBuild)
 $ErrorActionPreference = 'Stop'
+$env:DOTNET_ROLL_FORWARD = 'Major'
 Set-Location -LiteralPath $PSScriptRoot
 $tiltVersion = & '.\.venv\Scripts\python.exe' -c 'from tilt import __version__; print(__version__)'
 if ($LASTEXITCODE -ne 0) { throw 'Falha ao obter versão.' }

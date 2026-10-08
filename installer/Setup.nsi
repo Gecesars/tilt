@@ -52,6 +52,7 @@ Function .onInit
   ; application process to release its executable and Qt DLLs before copying.
   ${GetParameters} $0
   ${GetOptions} $0 "/WAITPID=" $1
+  ClearErrors ; An absent optional switch is not a failed installation.
   ${If} $1 != ""
     System::Call 'kernel32::OpenProcess(i 0x00100000, i 0, i r1) p .r2'
     ${If} $2 P<> 0
@@ -94,6 +95,7 @@ Section "EFTX Tilt" Main
   SetShellVarContext current
   SetRegView 64
   SetOverwrite on
+  ClearErrors
   !include "${ASSETS}\InstallFiles.nsh"
   WriteUninstaller "$INSTDIR\Desinstalar.exe"
   IfErrors install_failed

@@ -1,6 +1,6 @@
 # Fontes e substituição de bibliotecas
 
-Distribuição: EFTX Tilt 1.4.0 para Windows 10 1809+ / Windows 11 x64. Bibliotecas não modificadas.
+Distribuição: EFTX Tilt 1.4.1 para Windows 10 1809+ / Windows 11 x64. Bibliotecas não modificadas.
 Consulta às fontes oficiais: 7 de outubro de 2026.
 
 ## Fontes correspondentes
