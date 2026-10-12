@@ -4,7 +4,7 @@ from pathlib import Path
 import sqlite3
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QIcon, QPixmap, QAction, QKeySequence
+from PySide6.QtGui import QColor, QIcon, QPixmap, QAction, QKeySequence
 from PySide6.QtWidgets import (
     QAbstractItemView, QFileDialog, QFormLayout, QFrame, QGroupBox, QHBoxLayout, QHeaderView, QLabel,
     QLineEdit, QMainWindow, QMenu, QMessageBox, QPushButton, QSizePolicy,
@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 from .engineering import C_WORKSHEET, Design, calculate, channel_frequency, parse_decimal, wavelength_m
 from .reports import export_csv, export_json, fmt, report_html, snapshot
 from .visuals import BLUE, TEAL
+from .drafting import DraftingPage
 from .theme import STYLE, apply_palette
 from . import __version__
 
@@ -80,6 +81,10 @@ class MainWindow(QMainWindow):
         from .diagrams import DiagramPage
         self.diagrams = DiagramPage()
         self.pages.addTab(self.diagrams, 'Diagramas')
+        self.drafting = DraftingPage()
+        self.drafting_tab_index = self.pages.addTab(self.drafting, 'Desenho cotado')
+        self.pages.tabBar().setTabTextColor(self.drafting_tab_index, QColor('#007f95'))
+        self.pages.setTabToolTip(self.drafting_tab_index, 'Vista de montagem e plano de corte SVG com cotas')
         self._catalog_page()
         self._projects_page()
         self._method_page()
@@ -383,6 +388,7 @@ class MainWindow(QMainWindow):
         self.export_button.setEnabled(False)
         self.print_button.setEnabled(False)
         self.diagrams.invalidate()
+        self.drafting.invalidate()
         self.result_tabs.setEnabled(False)
         self.answer.setText('Clique em Calcular comprimentos para ver a orientação com os novos dados.')
         self.rating_summary.setText('Potência do material: recalcule para atualizar a verificação.')
@@ -634,6 +640,7 @@ class MainWindow(QMainWindow):
         r = replace(r, warnings=tuple(warnings))
         self.result = r
         self.diagrams.set_result(r)
+        self.drafting.set_result(r, self.kind.currentData())
         self.report_preview.setHtml(report_html(r, self.model.currentText(), self.project_name.text()))
         self.secondary.setText(f'λ₀ {fmt(r.wavelength_m*1000)} mm  ·  λg {fmt(r.guided_wavelength_m*1000)} mm  ·  '
                                f'Coerência no alvo {fmt(r.coherence_efficiency*100, 3)}%  ·  '
